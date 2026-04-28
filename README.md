@@ -1,1 +1,1 @@
-# cmpe-297
+# Benchmarking Text and Speech AI Capabilities in Ilokano
