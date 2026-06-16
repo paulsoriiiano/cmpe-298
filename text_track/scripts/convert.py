@@ -13,11 +13,21 @@ AUDIT_COLUMNS = [
 
 def json_to_csv_with_bootstrap(json_input, csv_output):
     """
-    Reads a standard JSON file (list of dicts) and converts to CSV.
+    Reads both standard JSON files (list of dicts) and JSONL files (one dict per line).
+    Converts to CSV.
     """
-    with open(json_input, 'r', encoding='utf-8') as f:
-        # We load the WHOLE file at once using json.load()
-        data = json.load(f)
+    data = []
+    
+    if json_input.endswith('.jsonl'):
+        # Read JSONL format (one JSON object per line)
+        with open(json_input, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    data.append(json.loads(line))
+    else:
+        # Read standard JSON format (list of dicts)
+        with open(json_input, 'r', encoding='utf-8') as f:
+            data = json.load(f)
     
     # Flatten the data (handles nested audit_metadata if it exists)
     df = pd.json_normalize(data)
@@ -68,5 +78,5 @@ def csv_to_json(csv_input, json_output):
     print(f"🚀 Standard JSON reconstructed at {json_output}")
 
 # --- EXECUTION ---
-json_to_csv_with_bootstrap("ilokano_reasoning_benchmark_draft.json", "audit_sheet.csv")
+json_to_csv_with_bootstrap("retranslated_dataset_with_metadata.jsonl", "audit_sheet_retranslated.csv")
 # csv_to_json("audit_sheet.csv", "verified_dataset.json")
