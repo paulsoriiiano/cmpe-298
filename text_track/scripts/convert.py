@@ -78,5 +78,5 @@ def csv_to_json(csv_input, json_output):
     print(f"🚀 Standard JSON reconstructed at {json_output}")
 
 # --- EXECUTION ---
-json_to_csv_with_bootstrap("retranslated_dataset_with_metadata.jsonl", "audit_sheet_retranslated.csv")
+json_to_csv_with_bootstrap("text_track/data/dataset.jsonl", "text_track/data/audit_sheet.csv")
 # csv_to_json("audit_sheet.csv", "verified_dataset.json")
