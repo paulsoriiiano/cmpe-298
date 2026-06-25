@@ -1,0 +1,400 @@
+1
+00:00:01,000 --> 00:00:01,960
+Luke 5
+
+2
+00:00:01,960 --> 00:00:07,680
+On one occasion, while the crowd was pressing in on him to hear the word of God,
+
+3
+00:00:08,140 --> 00:00:12,440
+he was standing by the lake of Gennesaret, and he saw two boats by the lake,
+
+4
+00:00:12,860 --> 00:00:16,120
+but the fishermen had gone out of them and were washing their nets.
+
+5
+00:00:16,940 --> 00:00:19,440
+Getting into one of the boats, which was Simon's,
+
+6
+00:00:19,700 --> 00:00:22,040
+he asked him to put out a little from the land,
+
+7
+00:00:22,460 --> 00:00:24,880
+and he sat down and taught the people from the boat.
+
+8
+00:00:25,560 --> 00:00:28,600
+And when he had finished speaking, he said to Simon,
+
+9
+00:00:28,600 --> 00:00:32,640
+Put out into the deep, and let down your nets for a catch.
+
+10
+00:00:33,260 --> 00:00:34,740
+And Simon answered,
+
+11
+00:00:35,260 --> 00:00:39,500
+Master, we toiled all night and took nothing,
+
+12
+00:00:40,240 --> 00:00:43,380
+but at your word I will let down the nets.
+
+13
+00:00:44,160 --> 00:00:47,720
+And when they had done this, they enclosed a large number of fish,
+
+14
+00:00:47,960 --> 00:00:49,260
+and their nets were breaking.
+
+15
+00:00:50,200 --> 00:00:53,460
+They signaled to their partners in the other boat to come and help them,
+
+16
+00:00:53,860 --> 00:00:57,600
+and they came and filled both the boats, so that they began to sink.
+
+17
+00:00:57,600 --> 00:01:02,800
+But when Simon Peter saw it, he fell down at Jesus' knees, saying,
+
+18
+00:01:03,540 --> 00:01:08,080
+Depart from me, for I am a sinful man, O Lord.
+
+19
+00:01:08,860 --> 00:01:13,240
+For he and all who were with him were astonished at the catch of fish that they had taken.
+
+20
+00:01:13,840 --> 00:01:18,700
+And so also were James and John, sons of Zebedee, who were partners with Simon.
+
+21
+00:01:19,340 --> 00:01:20,840
+And Jesus said to Simon,
+
+22
+00:01:21,320 --> 00:01:25,300
+Do not be afraid. From now on you will be catching men.
+
+23
+00:01:25,720 --> 00:01:27,580
+And when they had brought their boats to land,
+
+24
+00:01:27,600 --> 00:01:30,020
+they left everything and followed him.
+
+25
+00:01:31,120 --> 00:01:35,380
+While he was in one of the cities, there came a man full of leprosy.
+
+26
+00:01:35,880 --> 00:01:39,600
+And when he saw Jesus, he fell on his face and begged him,
+
+27
+00:01:40,280 --> 00:01:44,520
+Lord, if you will, you can make me clean.
+
+28
+00:01:45,340 --> 00:01:48,220
+And Jesus stretched out his hand and touched him, saying,
+
+29
+00:01:48,900 --> 00:01:51,080
+I will be clean.
+
+30
+00:01:51,560 --> 00:01:54,120
+And immediately the leprosy left him,
+
+31
+00:01:54,460 --> 00:01:57,080
+and he charged him to tell no one but,
+
+32
+00:01:57,600 --> 00:01:59,860
+Go, and show yourself to the priest,
+
+33
+00:02:00,160 --> 00:02:02,660
+and make an offering for your cleansing, as Moses commanded,
+
+34
+00:02:03,140 --> 00:02:04,100
+for a proof to them.
+
+35
+00:02:04,780 --> 00:02:07,600
+But now even more the report about him went abroad,
+
+36
+00:02:07,920 --> 00:02:12,180
+and great crowds gathered to hear him and to be healed of their infirmities.
+
+37
+00:02:12,880 --> 00:02:15,900
+But he would withdraw to desolate places and pray.
+
+38
+00:02:17,180 --> 00:02:19,880
+On one of those days, as he was teaching,
+
+39
+00:02:20,460 --> 00:02:22,840
+Pharisees and teachers of the law were sitting there,
+
+40
+00:02:22,840 --> 00:02:27,560
+who had come from every village of Galilee and Judea and from Jerusalem,
+
+41
+00:02:28,260 --> 00:02:30,780
+and the power of the Lord was with him to heal.
+
+42
+00:02:31,540 --> 00:02:35,520
+And behold, some men were bringing on a bed a man who was paralyzed,
+
+43
+00:02:36,000 --> 00:02:39,040
+and they were seeking to bring him in and lay him before Jesus.
+
+44
+00:02:39,520 --> 00:02:42,300
+But finding no way to bring him in because of the crowd,
+
+45
+00:02:42,700 --> 00:02:45,620
+they went up on the roof and let him down with his bed
+
+46
+00:02:45,620 --> 00:02:48,320
+through the tiles into the midst before Jesus.
+
+47
+00:02:49,020 --> 00:02:51,520
+And when he saw their faith, he said,
+
+48
+00:02:52,180 --> 00:02:55,240
+Man, your sins are forgiven you.
+
+49
+00:02:55,900 --> 00:02:57,500
+And the scribes and the Pharisees,
+
+50
+00:02:57,600 --> 00:02:59,260
+they began to question, saying,
+
+51
+00:03:00,040 --> 00:03:02,160
+Who is this who speaks blasphemies?
+
+52
+00:03:02,480 --> 00:03:04,820
+Who can forgive sins but God alone?
+
+53
+00:03:05,460 --> 00:03:08,920
+When Jesus perceived their thoughts, he answered them,
+
+54
+00:03:09,460 --> 00:03:11,880
+Why do you question in your hearts?
+
+55
+00:03:12,580 --> 00:03:15,380
+Which is easier to say, your sins are forgiven you,
+
+56
+00:03:15,480 --> 00:03:17,500
+or to say, rise and walk?
+
+57
+00:03:18,120 --> 00:03:22,120
+But that you may know that the Son of Man has authority on earth to forgive sins,
+
+58
+00:03:22,420 --> 00:03:24,720
+he said to the man who was paralyzed,
+
+59
+00:03:25,260 --> 00:03:27,560
+I say to you, rise,
+
+60
+00:03:27,920 --> 00:03:30,040
+pick up your bed, and go home.
+
+61
+00:03:30,780 --> 00:03:32,840
+And immediately he rose up before them
+
+62
+00:03:32,840 --> 00:03:34,720
+and picked up what he had been lying on,
+
+63
+00:03:34,900 --> 00:03:36,880
+and went home glorifying God.
+
+64
+00:03:37,500 --> 00:03:39,600
+And amazement seized them all,
+
+65
+00:03:40,160 --> 00:03:43,780
+and they glorified God and were filled with awe, saying,
+
+66
+00:03:44,520 --> 00:03:46,860
+We have seen extraordinary things today.
+
+67
+00:03:48,760 --> 00:03:52,000
+After this he went out and saw a tax collector named Levi
+
+68
+00:03:52,000 --> 00:03:53,440
+sitting at the tax booth.
+
+69
+00:03:54,040 --> 00:03:55,340
+And he said to him,
+
+70
+00:03:56,060 --> 00:03:56,960
+Follow me.
+
+71
+00:03:57,600 --> 00:04:00,160
+And leaving everything, he rose and followed him.
+
+72
+00:04:00,700 --> 00:04:03,360
+And Levi made him a great feast in his house.
+
+73
+00:04:03,720 --> 00:04:06,180
+And there was a large company of tax collectors
+
+74
+00:04:06,180 --> 00:04:08,600
+and others reclining at table with them.
+
+75
+00:04:09,220 --> 00:04:12,660
+And the Pharisees and their scribes grumbled at his disciples, saying,
+
+76
+00:04:13,080 --> 00:04:18,500
+Why do you eat and drink with tax collectors and sinners?
+
+77
+00:04:19,580 --> 00:04:21,240
+And Jesus answered them,
+
+78
+00:04:22,020 --> 00:04:24,520
+Those who are well have no need of a physician,
+
+79
+00:04:24,880 --> 00:04:26,000
+but those who are sick.
+
+80
+00:04:26,540 --> 00:04:27,580
+I have not come to call you,
+
+81
+00:04:27,580 --> 00:04:29,880
+but sinners to repentance.
+
+82
+00:04:30,900 --> 00:04:31,960
+And they said to him,
+
+83
+00:04:32,740 --> 00:04:35,500
+The disciples of John fast often and offer prayers,
+
+84
+00:04:35,780 --> 00:04:37,620
+and so do the disciples of the Pharisees,
+
+85
+00:04:37,920 --> 00:04:39,540
+but yours eat and drink.
+
+86
+00:04:40,260 --> 00:04:41,500
+And Jesus said to them,
+
+87
+00:04:42,320 --> 00:04:45,300
+Can you make wedding guests fast while the bridegroom is with them?
+
+88
+00:04:46,100 --> 00:04:49,000
+The days will come when the bridegroom is taken away from them,
+
+89
+00:04:49,340 --> 00:04:51,780
+and then they will fast in those days.
+
+90
+00:04:52,280 --> 00:04:54,280
+He also told them a parable.
+
+91
+00:04:55,040 --> 00:04:57,080
+No one tears a piece from a new garment
+
+92
+00:04:57,080 --> 00:04:57,560
+and puts it on a new one.
+
+93
+00:04:57,560 --> 00:05:00,800
+If he does, he will tear the new,
+
+94
+00:05:00,920 --> 00:05:02,980
+and the piece from the new will not match the old.
+
+95
+00:05:03,660 --> 00:05:06,860
+And no one puts new wine into old wineskins.
+
+96
+00:05:07,300 --> 00:05:10,060
+If he does, the new wine will burst the skins,
+
+97
+00:05:10,160 --> 00:05:12,820
+and it will be spilled, and the skins will be destroyed.
+
+98
+00:05:13,600 --> 00:05:16,640
+But new wine must be put into fresh wineskins,
+
+99
+00:05:17,220 --> 00:05:19,780
+and no one after drinking old wine desires new,
+
+100
+00:05:20,200 --> 00:05:23,380
+for he says, The old is good.
+

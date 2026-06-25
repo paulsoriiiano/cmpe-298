@@ -1,0 +1,600 @@
+1
+00:00:00,000 --> 00:00:02,200
+Luke 23
+
+2
+00:00:02,200 --> 00:00:07,060
+Then the whole company of them arose and brought him before Pilate,
+
+3
+00:00:07,400 --> 00:00:09,760
+and they began to accuse him, saying,
+
+4
+00:00:10,180 --> 00:00:13,740
+We found this man misleading our nation
+
+5
+00:00:13,740 --> 00:00:17,320
+and forbidding us to give tribute to Caesar
+
+6
+00:00:17,320 --> 00:00:23,000
+and saying that he himself is Christ, a king.
+
+7
+00:00:23,520 --> 00:00:25,080
+And Pilate asked him,
+
+8
+00:00:25,780 --> 00:00:27,820
+Are you the king of the Jews?
+
+9
+00:00:28,320 --> 00:00:29,760
+And he answered him,
+
+10
+00:00:30,520 --> 00:00:31,860
+You have said so.
+
+11
+00:00:32,520 --> 00:00:35,140
+Then Pilate said to the chief priests and the crowds,
+
+12
+00:00:35,860 --> 00:00:38,780
+I find no guilt in this man.
+
+13
+00:00:39,340 --> 00:00:40,980
+But they were urgent, saying,
+
+14
+00:00:41,760 --> 00:00:43,120
+He stirs up the people,
+
+15
+00:00:43,360 --> 00:00:47,140
+teaching throughout all Judea from Galilee even to this place.
+
+16
+00:00:47,720 --> 00:00:51,280
+When Pilate heard this, he asked whether the man was a Galilean.
+
+17
+00:00:51,280 --> 00:00:54,420
+And when he learned that he belonged to Herod's jurisdiction,
+
+18
+00:00:54,820 --> 00:00:56,640
+he sent him over to Herod,
+
+19
+00:00:56,700 --> 00:00:59,160
+who was himself in Jerusalem at that time.
+
+20
+00:00:59,160 --> 00:01:02,640
+When Herod saw Jesus, he was very glad,
+
+21
+00:01:02,980 --> 00:01:05,000
+for he had long desired to see him,
+
+22
+00:01:05,240 --> 00:01:06,660
+because he had heard about him,
+
+23
+00:01:06,880 --> 00:01:09,760
+and he was hoping to see some sign done by him.
+
+24
+00:01:10,500 --> 00:01:12,520
+So he questioned him at some length,
+
+25
+00:01:12,860 --> 00:01:13,980
+but he made no answer.
+
+26
+00:01:15,040 --> 00:01:18,340
+The chief priests and the scribes stood by vehemently accusing him.
+
+27
+00:01:19,120 --> 00:01:22,460
+And Herod with his soldiers treated him with contempt and mocked him.
+
+28
+00:01:23,380 --> 00:01:25,860
+Then, arraying him in splendid clothing,
+
+29
+00:01:26,200 --> 00:01:27,680
+he sent him back to Pilate.
+
+30
+00:01:27,680 --> 00:01:27,800
+And Pilate said,
+
+31
+00:01:27,800 --> 00:01:28,720
+And Herod and Pilate said,
+
+32
+00:01:28,720 --> 00:01:31,700
+And Herod and Pilate became friends with each other that very day.
+
+33
+00:01:32,140 --> 00:01:34,620
+For before this they had been at enmity with each other.
+
+34
+00:01:35,840 --> 00:01:39,260
+Pilate then called together the chief priests and the rulers and the people,
+
+35
+00:01:39,640 --> 00:01:40,380
+and said to them,
+
+36
+00:01:40,920 --> 00:01:45,420
+You brought me this man as one who was misleading the people,
+
+37
+00:01:46,000 --> 00:01:48,600
+and after examining him before you,
+
+38
+00:01:49,180 --> 00:01:54,720
+behold, I did not find this man guilty of any of your charges against him,
+
+39
+00:01:55,160 --> 00:01:58,640
+neither did Herod, for he sent him back to us.
+
+40
+00:01:59,140 --> 00:02:03,080
+Look, nothing deserving death has been done by him.
+
+41
+00:02:03,700 --> 00:02:06,900
+I will therefore punish and release him.
+
+42
+00:02:07,680 --> 00:02:09,720
+But they all cried out together,
+
+43
+00:02:10,360 --> 00:02:14,600
+Away with this man, and release to us Barabbas.
+
+44
+00:02:15,520 --> 00:02:19,620
+A man who had been thrown into prison for an insurrection started in the city,
+
+45
+00:02:19,920 --> 00:02:20,700
+and for murder.
+
+46
+00:02:21,760 --> 00:02:23,300
+Pilate addressed them once more,
+
+47
+00:02:23,720 --> 00:02:25,260
+desiring to release Jesus,
+
+48
+00:02:25,260 --> 00:02:26,520
+but they kept shouting,
+
+49
+00:02:27,360 --> 00:02:28,200
+Crucify!
+
+50
+00:02:28,720 --> 00:02:30,880
+Crucify him!
+
+51
+00:02:31,720 --> 00:02:33,280
+A third time he said to them,
+
+52
+00:02:34,100 --> 00:02:37,520
+Why, what evil has he done?
+
+53
+00:02:38,360 --> 00:02:41,780
+I have found in him no guilt deserving death.
+
+54
+00:02:42,200 --> 00:02:45,340
+I will therefore punish and release him.
+
+55
+00:02:46,000 --> 00:02:49,980
+But they were urgent, demanding with loud cries that he should be crucified,
+
+56
+00:02:50,400 --> 00:02:51,860
+and their voices prevailed.
+
+57
+00:02:52,420 --> 00:02:55,180
+So Pilate decided that their demand should be granted.
+
+58
+00:02:55,860 --> 00:02:58,700
+He released the man who had been thrown into prison for insurrection,
+
+59
+00:02:58,720 --> 00:03:00,800
+and murder, for whom they asked.
+
+60
+00:03:01,720 --> 00:03:03,760
+But he delivered Jesus over to their will.
+
+61
+00:03:04,740 --> 00:03:07,880
+And as they led him away, they seized one Simon of Cyrene,
+
+62
+00:03:08,140 --> 00:03:09,760
+who was coming in from the country,
+
+63
+00:03:10,100 --> 00:03:13,060
+and laid on him the cross to carry it behind Jesus.
+
+64
+00:03:13,720 --> 00:03:16,280
+And there followed him a great multitude of the people,
+
+65
+00:03:16,380 --> 00:03:19,100
+and of women who were mourning and lamenting for him.
+
+66
+00:03:19,700 --> 00:03:21,480
+But turning to them, Jesus said,
+
+67
+00:03:22,120 --> 00:03:23,600
+Daughters of Jerusalem,
+
+68
+00:03:24,600 --> 00:03:26,140
+do not weep for me,
+
+69
+00:03:26,800 --> 00:03:28,100
+but weep for yourselves,
+
+70
+00:03:28,720 --> 00:03:29,700
+and for your children.
+
+71
+00:03:30,740 --> 00:03:33,940
+For behold, the days are coming when they will say,
+
+72
+00:03:34,800 --> 00:03:36,100
+Blessed are the barren,
+
+73
+00:03:36,560 --> 00:03:38,440
+and the wombs that never bore,
+
+74
+00:03:38,880 --> 00:03:40,960
+and the breasts that never nursed.
+
+75
+00:03:42,220 --> 00:03:45,540
+Then they will begin to say to the mountains,
+
+76
+00:03:46,240 --> 00:03:49,040
+Fall on us, and to the hills,
+
+77
+00:03:49,900 --> 00:03:50,740
+cover us.
+
+78
+00:03:51,200 --> 00:03:54,720
+For if they do these things when the wood is green,
+
+79
+00:03:54,720 --> 00:03:58,100
+what will happen when it is dry?
+
+80
+00:03:58,720 --> 00:04:02,880
+Two others who were criminals were led away to be put to death with him.
+
+81
+00:04:03,380 --> 00:04:06,180
+And when they came to the place that is called the Skull,
+
+82
+00:04:06,640 --> 00:04:08,700
+there they crucified him and the criminals,
+
+83
+00:04:09,000 --> 00:04:10,920
+one on his right and one on his left.
+
+84
+00:04:10,920 --> 00:04:12,400
+And Jesus said,
+
+85
+00:04:13,200 --> 00:04:17,400
+Father, forgive them,
+
+86
+00:04:18,860 --> 00:04:22,500
+for they know not what they do.
+
+87
+00:04:23,400 --> 00:04:26,100
+And they cast lots to divide his garments.
+
+88
+00:04:26,660 --> 00:04:28,120
+And the people stood by watching,
+
+89
+00:04:28,120 --> 00:04:30,120
+but the rulers scoffed at him, saying,
+
+90
+00:04:30,120 --> 00:04:32,120
+He saved others.
+
+91
+00:04:32,120 --> 00:04:34,120
+Let him save himself,
+
+92
+00:04:34,120 --> 00:04:36,120
+if he is the Christ of God,
+
+93
+00:04:36,120 --> 00:04:38,120
+his chosen one.
+
+94
+00:04:38,120 --> 00:04:40,120
+The soldiers also mocked him,
+
+95
+00:04:40,120 --> 00:04:42,120
+coming up and offering him sour wine,
+
+96
+00:04:42,120 --> 00:04:44,120
+and saying,
+
+97
+00:04:44,120 --> 00:04:46,120
+If you are the king of the Jews,
+
+98
+00:04:46,120 --> 00:04:48,120
+save yourself.
+
+99
+00:04:48,120 --> 00:04:50,120
+There was also an inscription over him,
+
+100
+00:04:50,120 --> 00:04:52,120
+This is the king of the Jews.
+
+101
+00:04:52,120 --> 00:04:54,120
+One of the criminals who were hanged railed at him, saying,
+
+102
+00:04:54,120 --> 00:04:56,120
+This is the king of the Jews.
+
+103
+00:04:56,120 --> 00:04:58,120
+One of the criminals who were hanged railed at him, saying,
+
+104
+00:04:58,120 --> 00:05:00,120
+Are you not the Christ?
+
+105
+00:05:00,120 --> 00:05:02,120
+Save yourself and us.
+
+106
+00:05:02,120 --> 00:05:05,120
+But the other rebuked him, saying,
+
+107
+00:05:05,120 --> 00:05:08,120
+Do you not fear God,
+
+108
+00:05:08,120 --> 00:05:13,120
+since you are under the same sentence of condemnation?
+
+109
+00:05:13,120 --> 00:05:16,120
+And we indeed justly,
+
+110
+00:05:16,120 --> 00:05:24,120
+for we are receiving due reward of our deeds.
+
+111
+00:05:24,120 --> 00:05:27,120
+But this man has done nothing right.
+
+112
+00:05:27,120 --> 00:05:30,120
+And he said,
+
+113
+00:05:30,120 --> 00:05:36,120
+Jesus, remember me when you come into your kingdom.
+
+114
+00:05:36,120 --> 00:05:38,120
+And he said to him,
+
+115
+00:05:38,120 --> 00:05:44,120
+Truly I say to you,
+
+116
+00:05:44,120 --> 00:05:52,120
+today you will be with me in paradise.
+
+117
+00:05:52,120 --> 00:05:54,120
+It was now about the sixth hour,
+
+118
+00:05:54,120 --> 00:05:56,120
+and there was darkness over the whole land.
+
+119
+00:05:56,120 --> 00:05:58,120
+Until the ninth hour,
+
+120
+00:05:58,120 --> 00:06:00,120
+while the sun's light failed,
+
+121
+00:06:00,120 --> 00:06:04,120
+and the curtain of the temple was torn in two.
+
+122
+00:06:04,120 --> 00:06:07,120
+Then Jesus, calling out with a loud voice, said,
+
+123
+00:06:07,120 --> 00:06:23,120
+Father, into your hands I commit my spirit.
+
+124
+00:06:23,120 --> 00:06:25,120
+And having said this,
+
+125
+00:06:25,120 --> 00:06:27,120
+he breathed his last.
+
+126
+00:06:27,120 --> 00:06:31,120
+Now when the centurion saw what had taken place,
+
+127
+00:06:31,120 --> 00:06:33,120
+he praised God, saying,
+
+128
+00:06:33,120 --> 00:06:36,120
+Certainly this man was innocent.
+
+129
+00:06:36,120 --> 00:06:40,120
+And all the crowds that had assembled for this spectacle,
+
+130
+00:06:40,120 --> 00:06:42,120
+when they saw what had taken place,
+
+131
+00:06:42,120 --> 00:06:45,120
+returned home beating their breasts.
+
+132
+00:06:45,120 --> 00:06:47,120
+And all his acquaintances
+
+133
+00:06:47,120 --> 00:06:50,120
+and the women who had followed him from Galilee
+
+134
+00:06:50,120 --> 00:06:53,120
+stood at a distance watching these things.
+
+135
+00:06:53,120 --> 00:06:55,120
+Now there was a man named Joseph,
+
+136
+00:06:55,120 --> 00:06:57,120
+from the Jewish town of Arimathea.
+
+137
+00:06:57,120 --> 00:06:59,120
+He was a member of the council,
+
+138
+00:06:59,120 --> 00:07:01,120
+a good and righteous man,
+
+139
+00:07:01,120 --> 00:07:04,120
+who had not consented to their decision and action,
+
+140
+00:07:04,120 --> 00:07:07,120
+and he was looking for the kingdom of God.
+
+141
+00:07:07,120 --> 00:07:11,120
+This man went to Pilate and asked for the body of Jesus.
+
+142
+00:07:11,120 --> 00:07:14,120
+Then he took it down and wrapped it in a linen shroud,
+
+143
+00:07:14,120 --> 00:07:16,120
+and laid him in a tomb cut in stone,
+
+144
+00:07:16,120 --> 00:07:19,120
+where no one had ever yet been laid.
+
+145
+00:07:19,120 --> 00:07:21,120
+It was the day of preparation,
+
+146
+00:07:21,120 --> 00:07:23,120
+and the Sabbath was beginning.
+
+147
+00:07:23,120 --> 00:07:25,120
+The women who had come with him from Galilee
+
+148
+00:07:25,120 --> 00:07:29,120
+followed and saw the tomb and how his body was laid.
+
+149
+00:07:29,120 --> 00:07:32,120
+Then they returned and prepared spices and ointments.
+
+150
+00:07:32,120 --> 00:07:35,120
+On the Sabbath they rested according to the commandment.
+

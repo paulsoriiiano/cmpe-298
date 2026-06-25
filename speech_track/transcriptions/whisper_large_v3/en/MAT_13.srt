@@ -1,0 +1,384 @@
+1
+00:00:00,800 --> 00:00:02,000
+Matthew 13
+
+2
+00:00:02,000 --> 00:00:07,360
+That same day Jesus went out of the house and sat beside the sea,
+
+3
+00:00:07,560 --> 00:00:12,560
+and great crowds gathered about him, so that he got into a boat and sat down.
+
+4
+00:00:13,120 --> 00:00:18,860
+And the whole crowd stood on the beach, and he told them many things in parables, saying,
+
+5
+00:00:19,100 --> 00:00:25,900
+A sower went out to sow, and as he sowed, some seeds fell along the path,
+
+6
+00:00:25,900 --> 00:00:31,080
+and the birds came and devoured them. Other seeds fell on rocky ground,
+
+7
+00:00:31,460 --> 00:00:35,160
+where they did not have much soil, and immediately they sprang up,
+
+8
+00:00:35,480 --> 00:00:40,360
+since they had no depth of soil. But when the sun rose, they were scorched,
+
+9
+00:00:40,680 --> 00:00:46,120
+and since they had no root, they withered away. Other seeds fell among thorns,
+
+10
+00:00:46,400 --> 00:00:52,240
+and the thorns grew up and choked them. Other seeds fell on good soil and produced grain,
+
+11
+00:00:52,240 --> 00:00:55,860
+some a hundredfold, some sixty, some thirty.
+
+12
+00:00:56,480 --> 00:00:59,280
+He who has ears, let him hear.
+
+13
+00:01:01,240 --> 00:01:06,260
+Then the disciples came and said to him, Why do you speak to them in parables?
+
+14
+00:01:06,900 --> 00:01:12,840
+And he answered them, To you it has been given to know the secrets of the kingdom of heaven,
+
+15
+00:01:13,360 --> 00:01:18,520
+but to them it has not been given. For to the one who has, more will be given,
+
+16
+00:01:18,700 --> 00:01:25,700
+and he will have an abundance. But from the one who has not, even what he has will be taken away.
+
+17
+00:01:26,480 --> 00:01:30,940
+This is why I speak to them in parables, because seeing they do not see,
+
+18
+00:01:31,240 --> 00:01:34,000
+and hearing they do not hear, nor do they understand.
+
+19
+00:01:34,920 --> 00:01:39,140
+Indeed, in their case the prophecy of Isaiah is fulfilled that says,
+
+20
+00:01:39,720 --> 00:01:44,780
+You will indeed hear, but never understand, and you will indeed see, but never perceive.
+
+21
+00:01:45,560 --> 00:01:49,960
+For this people's heart has grown dull, and with their ears they can barely hear,
+
+22
+00:01:49,960 --> 00:01:55,360
+and their eyes they have closed, lest they should see with their eyes, and hear with their ears,
+
+23
+00:01:55,520 --> 00:01:55,880
+and understand.
+
+24
+00:01:55,880 --> 00:01:59,320
+Understand with their heart and turn, and I would heal them.
+
+25
+00:02:00,160 --> 00:02:05,140
+But blessed are your eyes, for they see, and your ears, for they hear.
+
+26
+00:02:05,840 --> 00:02:10,000
+For truly I say to you, many prophets and righteous people longed to see what you see,
+
+27
+00:02:10,280 --> 00:02:14,020
+and did not see it, and to hear what you hear, and did not hear it.
+
+28
+00:02:14,940 --> 00:02:19,560
+Hear then the parable of the sower. When anyone hears the word of the kingdom,
+
+29
+00:02:19,820 --> 00:02:25,400
+and does not understand it, the evil one comes and snatches away what has been sown in his heart.
+
+30
+00:02:25,920 --> 00:02:30,660
+This is what was sown along the path. As for what was sown on rocky ground,
+
+31
+00:02:31,040 --> 00:02:35,000
+this is the one who hears the word and immediately receives it with joy.
+
+32
+00:02:35,320 --> 00:02:41,220
+Yet he has no root in himself, but endures for a while, and when tribulation or persecution
+
+33
+00:02:41,220 --> 00:02:47,560
+arises on account of the word, immediately he falls away. As for what was sown among thorns,
+
+34
+00:02:47,960 --> 00:02:52,640
+this is the one who hears the word, but the cares of the world and the deceitfulness of riches
+
+35
+00:02:52,640 --> 00:02:55,280
+choke the word, and it proves unfruitful.
+
+36
+00:02:55,920 --> 00:03:01,480
+As for what was sown on good soil, this is the one who hears the word and understands it.
+
+37
+00:03:01,480 --> 00:03:07,880
+He indeed bears fruit and yields in one case a hundredfold, in another sixty, and in another
+
+38
+00:03:07,880 --> 00:03:11,280
+thirty. He put another parable before them, saying,
+
+39
+00:03:12,160 --> 00:03:16,940
+The kingdom of heaven may be compared to a man who sowed good seed in his field.
+
+40
+00:03:17,680 --> 00:03:23,700
+But while his men were sleeping, his enemy came and sowed weeds among the wheat and went away.
+
+41
+00:03:25,400 --> 00:03:32,940
+And the servants of the master of the house came and said to him,
+
+42
+00:03:33,480 --> 00:03:38,720
+Master, did you not sow good seed in your field? How then does it have weeds?
+
+43
+00:03:39,440 --> 00:03:45,160
+He said to them, An enemy has done this. So the servants said to him,
+
+44
+00:03:45,480 --> 00:03:51,880
+Then do you want us to go and gather them? But he said, No, lest in gathering the weeds
+
+45
+00:03:51,880 --> 00:03:55,180
+you root up the wheat along with them. Let both grow together, and let one of them grow.
+
+46
+00:03:55,180 --> 00:03:55,380
+And he said, No, lest in gathering the weeds you root up the wheat along with them.
+
+47
+00:03:55,400 --> 00:03:59,320
+Let both grow together until the harvest. And at harvest time I will tell the reapers,
+
+48
+00:04:00,000 --> 00:04:05,980
+Gather the weeds first, and bind them in bundles to be burned. But gather the wheat into my barn.
+
+49
+00:04:06,700 --> 00:04:12,720
+He put another parable before them, saying, The kingdom of heaven is like a grain of mustard
+
+50
+00:04:12,720 --> 00:04:19,260
+seed that a man took and sowed in his field. It is the smallest of all seeds, but when it
+
+51
+00:04:19,260 --> 00:04:25,180
+has grown it is larger than all the garden plants and becomes a tree, so that the birds of the air
+
+52
+00:04:25,180 --> 00:04:30,260
+come and make nests in its branches. He told them another parable.
+
+53
+00:04:31,200 --> 00:04:36,260
+The kingdom of heaven is like leaven that a woman took and hid in three measures of flour,
+
+54
+00:04:36,740 --> 00:04:43,280
+till it was all leavened. All these things Jesus said to the crowds in parables. Indeed,
+
+55
+00:04:43,380 --> 00:04:49,180
+he said nothing to them without a parable. This was to fulfill what was spoken by the prophet.
+
+56
+00:04:49,180 --> 00:04:54,980
+I will open my mouth in parables. I will utter what has been hidden since the
+
+57
+00:04:54,980 --> 00:05:01,180
+foundation of the world. Then he left the crowds and went into the house, and his disciples came
+
+58
+00:05:01,180 --> 00:05:08,440
+to him, saying, Explain to us the parable of the weeds of the field. He answered, The one who sows
+
+59
+00:05:08,440 --> 00:05:14,540
+the good seed is the son of man, the field is the world, and the good seed is the sons of the
+
+60
+00:05:14,540 --> 00:05:20,360
+kingdom. The weeds are the sons of the evil one, and the enemy who sowed them is the devil.
+
+61
+00:05:21,340 --> 00:05:24,960
+The harvest is the close of the age, and the reapers are the ones who sow the good seed.
+
+62
+00:05:24,960 --> 00:05:31,260
+Or angels. Just as the weeds are gathered and burned with fire, so will it be at the close of
+
+63
+00:05:31,260 --> 00:05:37,220
+the age. The son of man will send his angels, and they will gather out of his kingdom all causes of
+
+64
+00:05:37,220 --> 00:05:43,680
+sin and all lawbreakers, and throw them into the fiery furnace. In that place there will be weeping
+
+65
+00:05:43,680 --> 00:05:49,820
+and gnashing of teeth. Then the righteous will shine like the sun in the kingdom of their father.
+
+66
+00:05:50,860 --> 00:05:53,200
+He who has ears, let him hear.
+
+67
+00:05:54,960 --> 00:06:00,160
+The kingdom of heaven is like treasure hidden in a field, which a man found and covered up.
+
+68
+00:06:00,600 --> 00:06:04,480
+Then in his joy he goes and sells all that he has and buys that field.
+
+69
+00:06:05,320 --> 00:06:11,140
+Again, the kingdom of heaven is like a merchant in search of fine pearls, who on finding one
+
+70
+00:06:11,140 --> 00:06:18,140
+pearl of great value, went and sold all that he had and bought it. Again, the kingdom of heaven
+
+71
+00:06:18,140 --> 00:06:23,520
+is like a net that was thrown into the sea and gathered fish of every kind. When it was full,
+
+72
+00:06:23,960 --> 00:06:24,940
+men drew it ashore and threw it into the sea. He who has ears, let him hear.
+
+73
+00:06:24,960 --> 00:06:30,040
+He who has nose, let him see. He who has tooth, let him wonder. He who has teeth licks his nose.
+
+74
+00:06:30,040 --> 00:06:35,520
+When patient songs, it is easy with
+
+75
+00:06:36,240 --> 00:06:42,120
+and throw them into the fiery furnace. In that place there will be weeping and gnashing of teeth.
+
+76
+00:06:42,940 --> 00:06:47,080
+Have you understood all these things? They said to him,
+
+77
+00:06:47,840 --> 00:06:54,540
+Yes. And he said to them, Therefore, every scribe who has been trained for the kingdom of heaven
+
+78
+00:06:54,540 --> 00:06:54,940
+is a people of God. He who has cheese, let him eat. He who has bread, let him buy bread. They say to him,
+
+79
+00:06:54,960 --> 00:06:56,560
+is like a master of a house,
+
+80
+00:06:56,720 --> 00:07:00,120
+who brings out of his treasure what is new and what is old.
+
+81
+00:07:01,880 --> 00:07:04,280
+And when Jesus had finished these parables,
+
+82
+00:07:04,420 --> 00:07:05,400
+he went away from there.
+
+83
+00:07:05,660 --> 00:07:08,320
+And coming to his hometown, he taught them in their synagogue,
+
+84
+00:07:08,760 --> 00:07:11,080
+so that they were astonished, and said,
+
+85
+00:07:11,300 --> 00:07:15,220
+Where did this man get this wisdom and these mighty works?
+
+86
+00:07:15,980 --> 00:07:17,620
+Is not this the carpenter's son?
+
+87
+00:07:18,180 --> 00:07:19,740
+Is not his mother called Mary?
+
+88
+00:07:20,060 --> 00:07:23,700
+And are not his brothers James and Joseph and Simon and Judas?
+
+89
+00:07:23,700 --> 00:07:26,340
+And are not all his sisters with us?
+
+90
+00:07:26,580 --> 00:07:28,580
+Where then did this man get all these things?
+
+91
+00:07:29,020 --> 00:07:30,800
+And they took offense at him.
+
+92
+00:07:31,140 --> 00:07:32,320
+But Jesus said to them,
+
+93
+00:07:32,700 --> 00:07:35,080
+A prophet is not without honor,
+
+94
+00:07:35,520 --> 00:07:39,000
+except in his hometown and in his own household.
+
+95
+00:07:39,860 --> 00:07:41,960
+And he did not do many mighty works there,
+
+96
+00:07:42,220 --> 00:07:43,720
+because of their unbelief.
+

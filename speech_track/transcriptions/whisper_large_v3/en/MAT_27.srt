@@ -1,0 +1,792 @@
+1
+00:00:00,000 --> 00:00:02,580
+Matthew 27
+
+2
+00:00:02,580 --> 00:00:10,320
+When morning came, all the chief priests and the elders of the people took counsel against Jesus to put him to death.
+
+3
+00:00:10,780 --> 00:00:15,320
+And they bound him and led him away and delivered him over to Pilate the governor.
+
+4
+00:00:16,000 --> 00:00:19,960
+Then when Judas, his betrayer, saw that Jesus was condemned,
+
+5
+00:00:20,440 --> 00:00:26,180
+he changed his mind and brought back the thirty pieces of silver to the chief priests and the elders, saying,
+
+6
+00:00:26,760 --> 00:00:29,500
+I have sinned by betraying innocent blood.
+
+7
+00:00:30,000 --> 00:00:30,960
+They said,
+
+8
+00:00:31,640 --> 00:00:34,520
+What is that to us? See to it yourself.
+
+9
+00:00:35,380 --> 00:00:41,740
+And throwing down the pieces of silver into the temple, he departed, and he went and hanged himself.
+
+10
+00:00:42,080 --> 00:00:45,880
+But the chief priests, taking the pieces of silver, said,
+
+11
+00:00:46,700 --> 00:00:51,900
+It is not lawful to put them into the treasury, since it is blood money.
+
+12
+00:00:52,980 --> 00:00:59,400
+So they took counsel and bought with them the potter's field as a burial place for strangers.
+
+13
+00:01:00,000 --> 00:01:04,820
+Therefore that field has been called the field of blood to this day.
+
+14
+00:01:05,860 --> 00:01:10,080
+Then was fulfilled what had been spoken by the prophet Jeremiah, saying,
+
+15
+00:01:10,880 --> 00:01:17,760
+And they took the thirty pieces of silver, the price of him on whom a price had been set by some of the sons of Israel,
+
+16
+00:01:17,940 --> 00:01:21,940
+and they gave them for the potter's field, as the Lord directed me.
+
+17
+00:01:22,920 --> 00:01:27,000
+Now Jesus stood before the governor, and the governor asked him,
+
+18
+00:01:27,000 --> 00:01:29,380
+Are you the king of the Jews?
+
+19
+00:01:30,000 --> 00:01:30,840
+Jesus said,
+
+20
+00:01:31,620 --> 00:01:32,760
+You have said so.
+
+21
+00:01:33,520 --> 00:01:38,480
+But when he was accused by the chief priests and elders, he gave no answer.
+
+22
+00:01:39,200 --> 00:01:40,600
+Then Pilate said to him,
+
+23
+00:01:41,280 --> 00:01:44,680
+Do you not hear how many things they testify against you?
+
+24
+00:01:45,360 --> 00:01:51,320
+But he gave him no answer, not even to a single charge, so that the governor was greatly amazed.
+
+25
+00:01:51,780 --> 00:01:58,380
+Now at the feast the governor was accustomed to release for the crowd any one prisoner whom they wanted.
+
+26
+00:01:59,060 --> 00:01:59,960
+And they had then,
+
+27
+00:02:00,120 --> 00:02:02,380
+a notorious prisoner called Barabbas.
+
+28
+00:02:02,880 --> 00:02:04,180
+So when they had gathered,
+
+29
+00:02:04,540 --> 00:02:05,520
+Pilate said to them,
+
+30
+00:02:06,340 --> 00:02:08,980
+Whom do you want me to release for you,
+
+31
+00:02:09,220 --> 00:02:09,920
+Barabbas,
+
+32
+00:02:10,200 --> 00:02:11,360
+or Jesus,
+
+33
+00:02:11,740 --> 00:02:13,180
+who is called Christ?
+
+34
+00:02:14,360 --> 00:02:18,020
+For he knew that it was out of envy that they had delivered him up.
+
+35
+00:02:18,560 --> 00:02:18,960
+Besides,
+
+36
+00:02:19,200 --> 00:02:21,120
+while he was sitting on the judgment seat,
+
+37
+00:02:21,500 --> 00:02:23,300
+his wife sent word to him,
+
+38
+00:02:23,640 --> 00:02:26,160
+Have nothing to do with that righteous man,
+
+39
+00:02:26,880 --> 00:02:29,940
+for I have suffered much because of him today in a dream,
+
+40
+00:02:30,120 --> 00:02:32,780
+and I have not heard a word from him since the day of my death.
+
+41
+00:02:32,780 --> 00:02:36,780
+Now the chief priests and the elders persuaded the crowd to ask for Barabbas and destroy Jesus.
+
+42
+00:02:36,780 --> 00:02:38,780
+The governor again said to them,
+
+43
+00:02:38,780 --> 00:02:42,780
+Which of the two do you want me to release for you?
+
+44
+00:02:42,780 --> 00:02:44,780
+And they said,
+
+45
+00:02:44,780 --> 00:02:46,780
+Barabbas!
+
+46
+00:02:46,780 --> 00:02:48,780
+Pilate said to them,
+
+47
+00:02:48,780 --> 00:02:52,780
+Then what shall I do with Jesus, who is called Christ?
+
+48
+00:02:52,780 --> 00:02:54,780
+They all said,
+
+49
+00:02:54,780 --> 00:02:56,780
+Let him be crucified!
+
+50
+00:02:56,780 --> 00:02:58,780
+And he said,
+
+51
+00:02:58,780 --> 00:02:59,880
+Why?
+
+52
+00:02:59,880 --> 00:03:01,880
+What evil has he done?
+
+53
+00:03:01,880 --> 00:03:03,880
+But they shouted all the more,
+
+54
+00:03:03,880 --> 00:03:07,880
+Let him be crucified!
+
+55
+00:03:07,880 --> 00:03:10,880
+So when Pilate saw that he was gaining nothing,
+
+56
+00:03:10,880 --> 00:03:12,880
+but rather that a riot was beginning,
+
+57
+00:03:12,880 --> 00:03:16,880
+he took water and washed his hands before the crowd, saying,
+
+58
+00:03:16,880 --> 00:03:19,880
+I am innocent of this man's blood.
+
+59
+00:03:19,880 --> 00:03:21,880
+See to it yourselves.
+
+60
+00:03:21,880 --> 00:03:23,880
+And all the people answered,
+
+61
+00:03:23,880 --> 00:03:27,880
+His blood be on us and on our children!
+
+62
+00:03:27,880 --> 00:03:29,880
+Then he released for them Barabbas,
+
+63
+00:03:29,880 --> 00:03:32,880
+and having scourged Jesus,
+
+64
+00:03:32,880 --> 00:03:35,880
+delivered him to be crucified.
+
+65
+00:03:35,880 --> 00:03:39,880
+Then the soldiers of the governor took Jesus into the governor's headquarters,
+
+66
+00:03:39,880 --> 00:03:42,880
+and they gathered the whole battalion before him.
+
+67
+00:03:42,880 --> 00:03:44,880
+And they stripped him,
+
+68
+00:03:44,880 --> 00:03:46,880
+and put a scarlet robe on him,
+
+69
+00:03:46,880 --> 00:03:48,880
+and twisting together a crown of thorns,
+
+70
+00:03:48,880 --> 00:03:51,880
+they put it on his head and put a reed in his right hand.
+
+71
+00:03:51,880 --> 00:03:55,880
+And kneeling before him they mocked him, saying,
+
+72
+00:03:55,880 --> 00:03:57,880
+Hail King of the Jews!
+
+73
+00:03:57,880 --> 00:04:00,880
+Hail King of the Jews!
+
+74
+00:04:01,880 --> 00:04:03,880
+And they spit on him,
+
+75
+00:04:03,880 --> 00:04:04,880
+and took the reed,
+
+76
+00:04:04,880 --> 00:04:06,880
+and struck him on the head.
+
+77
+00:04:06,880 --> 00:04:08,880
+And when they had mocked him,
+
+78
+00:04:08,880 --> 00:04:10,880
+they stripped him of the robe,
+
+79
+00:04:10,880 --> 00:04:12,880
+and put his own clothes on him,
+
+80
+00:04:12,880 --> 00:04:14,880
+and led him away to crucify him.
+
+81
+00:04:16,880 --> 00:04:17,880
+As they went out,
+
+82
+00:04:17,880 --> 00:04:19,880
+they found a man of Cyrene,
+
+83
+00:04:19,880 --> 00:04:20,880
+Simon by name.
+
+84
+00:04:20,880 --> 00:04:23,880
+They compelled this man to carry his cross.
+
+85
+00:04:23,880 --> 00:04:26,880
+And when they came to a place called Golgotha,
+
+86
+00:04:26,880 --> 00:04:29,880
+which means place of a skull,
+
+87
+00:04:29,880 --> 00:04:32,880
+they offered him wine to drink mixed with gall.
+
+88
+00:04:32,880 --> 00:04:33,880
+But when he tasted it,
+
+89
+00:04:33,880 --> 00:04:35,880
+he would not drink it.
+
+90
+00:04:35,880 --> 00:04:37,880
+And when they had crucified him,
+
+91
+00:04:37,880 --> 00:04:41,880
+they divided his garments among them by casting lots.
+
+92
+00:04:41,880 --> 00:04:44,880
+Then they sat down and kept watch over him there.
+
+93
+00:04:44,880 --> 00:04:47,880
+And over his head they put the charge against him,
+
+94
+00:04:47,880 --> 00:04:48,880
+which read,
+
+95
+00:04:48,880 --> 00:04:50,880
+This is Jesus,
+
+96
+00:04:50,880 --> 00:04:53,880
+the King of the Jews.
+
+97
+00:04:53,880 --> 00:04:55,880
+Then two robbers were crucified with him,
+
+98
+00:04:55,880 --> 00:04:58,880
+one on the right and one on the left.
+
+99
+00:04:58,880 --> 00:05:00,880
+And those who passed by derided him,
+
+100
+00:05:00,880 --> 00:05:03,880
+wagging their heads and saying,
+
+101
+00:05:03,880 --> 00:05:06,880
+You who would destroy the temple
+
+102
+00:05:06,880 --> 00:05:09,880
+and rebuild it in three days,
+
+103
+00:05:09,880 --> 00:05:11,880
+save yourself.
+
+104
+00:05:11,880 --> 00:05:14,880
+If you are the Son of God,
+
+105
+00:05:14,880 --> 00:05:16,880
+come down from the cross.
+
+106
+00:05:16,880 --> 00:05:22,880
+So also the chief priests with the scribes and elders mocked him, saying,
+
+107
+00:05:22,880 --> 00:05:24,880
+He saved others.
+
+108
+00:05:24,880 --> 00:05:26,880
+He cannot save himself.
+
+109
+00:05:26,880 --> 00:05:29,880
+He is the King of Israel.
+
+110
+00:05:29,880 --> 00:05:31,880
+Let him come down now from the cross,
+
+111
+00:05:31,880 --> 00:05:33,880
+and we will believe in him.
+
+112
+00:05:33,880 --> 00:05:35,880
+He trusts in God.
+
+113
+00:05:35,880 --> 00:05:38,880
+Let God deliver him now if he desires him.
+
+114
+00:05:38,880 --> 00:05:39,880
+For he said,
+
+115
+00:05:39,880 --> 00:05:42,880
+I am the Son of God.
+
+116
+00:05:44,880 --> 00:05:46,880
+And the robbers who were crucified with him
+
+117
+00:05:46,880 --> 00:05:49,880
+also reviled him in the same way.
+
+118
+00:05:49,880 --> 00:05:51,880
+Now from the sixth hour
+
+119
+00:05:51,880 --> 00:05:53,880
+there was darkness over all the land
+
+120
+00:05:53,880 --> 00:05:55,880
+until the ninth hour.
+
+121
+00:05:55,880 --> 00:05:57,880
+And about the ninth hour
+
+122
+00:05:57,880 --> 00:06:02,880
+Jesus cried out with a loud voice, saying,
+
+123
+00:06:02,880 --> 00:06:05,880
+Eli!
+
+124
+00:06:05,880 --> 00:06:08,880
+Eli!
+
+125
+00:06:08,880 --> 00:06:13,880
+Lama sabachthani!
+
+126
+00:06:13,880 --> 00:06:16,880
+That is,
+
+127
+00:06:16,880 --> 00:06:18,880
+My God!
+
+128
+00:06:18,880 --> 00:06:21,880
+My God!
+
+129
+00:06:21,880 --> 00:06:25,880
+Why have you forsaken me?
+
+130
+00:06:25,880 --> 00:06:28,880
+And some of the bystanders, hearing it, said,
+
+131
+00:06:28,880 --> 00:06:30,880
+This man is calling Elijah.
+
+132
+00:06:30,880 --> 00:06:33,880
+And one of them at once ran and took a sponge,
+
+133
+00:06:33,880 --> 00:06:35,880
+filled it with sour wine,
+
+134
+00:06:35,880 --> 00:06:37,880
+and put it on a reed,
+
+135
+00:06:37,880 --> 00:06:39,880
+and gave it to him to drink.
+
+136
+00:06:39,880 --> 00:06:41,880
+But the others said,
+
+137
+00:06:41,880 --> 00:06:42,880
+Wait!
+
+138
+00:06:42,880 --> 00:06:45,880
+Let us see whether Elijah will come to save him.
+
+139
+00:06:45,880 --> 00:06:49,880
+And Jesus cried out again with a loud voice,
+
+140
+00:06:49,880 --> 00:06:52,880
+and yielded up his spirit.
+
+141
+00:06:53,880 --> 00:06:55,880
+And behold, the curtain of the temple
+
+142
+00:06:55,880 --> 00:06:58,880
+was torn in two from top to bottom,
+
+143
+00:06:58,880 --> 00:07:01,880
+and the earth shook, and the rocks were split.
+
+144
+00:07:01,880 --> 00:07:03,880
+The tombs also were opened,
+
+145
+00:07:03,880 --> 00:07:05,880
+and many bodies of the saints
+
+146
+00:07:05,880 --> 00:07:07,880
+who had fallen asleep were raised.
+
+147
+00:07:07,880 --> 00:07:09,880
+And coming out of the tombs after his resurrection,
+
+148
+00:07:09,880 --> 00:07:11,880
+they went into the holy city
+
+149
+00:07:11,880 --> 00:07:13,880
+and appeared to many.
+
+150
+00:07:13,880 --> 00:07:15,880
+When the centurion and those who were with him,
+
+151
+00:07:15,880 --> 00:07:17,880
+keeping watch over Jesus,
+
+152
+00:07:17,880 --> 00:07:19,880
+saw the earthquake and what took place,
+
+153
+00:07:19,880 --> 00:07:22,880
+they were filled with awe and said,
+
+154
+00:07:22,880 --> 00:07:26,880
+Truly, this was the Son of God.
+
+155
+00:07:26,880 --> 00:07:28,880
+There were also many women there,
+
+156
+00:07:28,880 --> 00:07:30,880
+looking on from a distance,
+
+157
+00:07:30,880 --> 00:07:32,880
+who had followed Jesus from Galilee,
+
+158
+00:07:32,880 --> 00:07:33,880
+ministering to him,
+
+159
+00:07:33,880 --> 00:07:35,880
+among whom were Mary Magdalene,
+
+160
+00:07:35,880 --> 00:07:38,880
+and Mary the mother of James and Joseph,
+
+161
+00:07:38,880 --> 00:07:41,880
+and the mother of the sons of Zebedee.
+
+162
+00:07:41,880 --> 00:07:43,880
+When it was evening,
+
+163
+00:07:43,880 --> 00:07:45,880
+there came a rich man from Arimathea,
+
+164
+00:07:45,880 --> 00:07:46,880
+named Joseph,
+
+165
+00:07:46,880 --> 00:07:48,880
+who also was a disciple of Jesus.
+
+166
+00:07:48,880 --> 00:07:51,880
+He went to Pilate and asked for the body of Jesus.
+
+167
+00:07:51,880 --> 00:07:54,880
+Then Pilate ordered it to be given to him.
+
+168
+00:07:54,880 --> 00:07:56,880
+And Joseph took the body
+
+169
+00:07:56,880 --> 00:07:58,880
+and wrapped it in a clean linen shroud,
+
+170
+00:07:58,880 --> 00:08:00,880
+and laid it in his own new tomb,
+
+171
+00:08:00,880 --> 00:08:02,880
+which he had cut in the rock.
+
+172
+00:08:02,880 --> 00:08:04,880
+And he rolled a great stone
+
+173
+00:08:04,880 --> 00:08:06,880
+to the entrance of the tomb
+
+174
+00:08:06,880 --> 00:08:08,880
+and went away.
+
+175
+00:08:08,880 --> 00:08:10,880
+Mary Magdalene and the other Mary were there,
+
+176
+00:08:10,880 --> 00:08:12,880
+sitting opposite the tomb.
+
+177
+00:08:12,880 --> 00:08:14,880
+The next day,
+
+178
+00:08:14,880 --> 00:08:15,880
+that is,
+
+179
+00:08:15,880 --> 00:08:17,880
+after the day of preparation,
+
+180
+00:08:17,880 --> 00:08:19,880
+the chief priests and the Pharisees
+
+181
+00:08:19,880 --> 00:08:21,880
+gathered before Pilate and said,
+
+182
+00:08:21,880 --> 00:08:22,880
+Sir,
+
+183
+00:08:22,880 --> 00:08:25,880
+we remember how that imposter said
+
+184
+00:08:25,880 --> 00:08:27,880
+while he was still alive,
+
+185
+00:08:27,880 --> 00:08:30,880
+After three days I will rise.
+
+186
+00:08:30,880 --> 00:08:32,880
+Therefore,
+
+187
+00:08:32,880 --> 00:08:34,880
+order the tomb to be made secure
+
+188
+00:08:34,880 --> 00:08:36,880
+until the third day,
+
+189
+00:08:36,880 --> 00:08:39,880
+lest his disciples go and steal him away
+
+190
+00:08:39,880 --> 00:08:41,880
+and tell the people
+
+191
+00:08:41,880 --> 00:08:43,880
+he has risen from the dead.
+
+192
+00:08:43,880 --> 00:08:45,880
+And the last fraud,
+
+193
+00:08:45,880 --> 00:08:48,880
+will be worse than the first.
+
+194
+00:08:48,880 --> 00:08:50,880
+Pilate said to them,
+
+195
+00:08:50,880 --> 00:08:52,880
+You have a guard of soldiers?
+
+196
+00:08:52,880 --> 00:08:55,880
+Go, make it as secure as you can.
+
+197
+00:08:55,880 --> 00:08:57,880
+So they went and made the tomb secure
+
+198
+00:08:57,880 --> 00:09:00,880
+by sealing the stone and setting a guard.
+

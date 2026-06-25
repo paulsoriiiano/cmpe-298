@@ -1,0 +1,380 @@
+1
+00:00:01,000 --> 00:00:02,280
+Matthew 23
+
+2
+00:00:02,280 --> 00:00:06,420
+Then Jesus said to the crowds and to his disciples,
+
+3
+00:00:06,880 --> 00:00:10,520
+The scribes and the Pharisees sit on Moses' seat.
+
+4
+00:00:11,060 --> 00:00:15,320
+So practice and observe whatever they tell you, but not what they do.
+
+5
+00:00:15,800 --> 00:00:18,120
+For they preach, but do not practice.
+
+6
+00:00:18,700 --> 00:00:23,640
+They tie up heavy burdens hard to bear, and lay them on people's shoulders,
+
+7
+00:00:24,140 --> 00:00:27,800
+but they themselves are not willing to move them with their finger.
+
+8
+00:00:27,800 --> 00:00:31,900
+They do all their deeds to be seen by others,
+
+9
+00:00:32,380 --> 00:00:35,840
+for they make their phylacteries broad and their fringes long,
+
+10
+00:00:36,100 --> 00:00:41,660
+and they love the place of honor at feasts, and the best seats in the synagogues,
+
+11
+00:00:42,000 --> 00:00:46,220
+and greetings in the marketplaces, and being called rabbi by others.
+
+12
+00:00:46,980 --> 00:00:52,500
+But you are not to be called rabbi, for you have one teacher, and you are all brothers.
+
+13
+00:00:52,860 --> 00:00:57,280
+And call no man your father on earth, for you have one Father,
+
+14
+00:00:57,540 --> 00:00:57,780
+who is God.
+
+15
+00:00:57,800 --> 00:01:03,800
+Neither be called instructors, for you have one instructor, the Christ.
+
+16
+00:01:04,340 --> 00:01:06,600
+The greatest among you shall be your servant.
+
+17
+00:01:07,200 --> 00:01:12,560
+Whoever exalts himself will be humbled, and whoever humbles himself will be exalted.
+
+18
+00:01:14,240 --> 00:01:18,340
+But woe to you, scribes and Pharisees, hypocrites!
+
+19
+00:01:18,920 --> 00:01:22,080
+For you shut the kingdom of heaven in people's faces.
+
+20
+00:01:22,420 --> 00:01:27,740
+For you neither enter yourselves, nor allow those who would enter to go in.
+
+21
+00:01:28,680 --> 00:01:32,920
+Woe to you, scribes and Pharisees, hypocrites!
+
+22
+00:01:33,980 --> 00:01:38,840
+For you travel across sea and land to make a single proselyte,
+
+23
+00:01:39,080 --> 00:01:44,720
+and when he becomes a proselyte, you make him twice as much a child of hell as yourselves.
+
+24
+00:01:46,100 --> 00:01:48,760
+Woe to you, blind guides, who say,
+
+25
+00:01:48,760 --> 00:01:51,820
+If anyone swears by the temple, it is nothing.
+
+26
+00:01:52,260 --> 00:01:56,820
+But if anyone swears by the gold of the temple, he is bound by his oath.
+
+27
+00:01:57,800 --> 00:02:00,060
+You blind fools!
+
+28
+00:02:00,920 --> 00:02:05,720
+For which is greater, the gold or the temple that has made the gold sacred?
+
+29
+00:02:06,840 --> 00:02:07,760
+And you say,
+
+30
+00:02:08,180 --> 00:02:10,940
+If anyone swears by the altar, it is nothing.
+
+31
+00:02:11,260 --> 00:02:15,960
+But if anyone swears by the gift that is on the altar, he is bound by his oath.
+
+32
+00:02:17,040 --> 00:02:18,840
+You blind men!
+
+33
+00:02:19,380 --> 00:02:24,200
+For which is greater, the gift or the altar that makes the gift sacred?
+
+34
+00:02:25,140 --> 00:02:27,780
+So whoever swears by the altar,
+
+35
+00:02:28,080 --> 00:02:31,020
+swears by it and by everything on it.
+
+36
+00:02:31,600 --> 00:02:37,300
+And whoever swears by the temple, swears by it and by him who dwells in it.
+
+37
+00:02:37,720 --> 00:02:41,780
+And whoever swears by heaven, swears by the throne of God,
+
+38
+00:02:42,340 --> 00:02:44,620
+and by him who sits upon it.
+
+39
+00:02:45,980 --> 00:02:50,280
+Woe to you, scribes and Pharisees, hypocrites!
+
+40
+00:02:51,020 --> 00:02:53,940
+For you tithe mint and dill and cumin,
+
+41
+00:02:53,940 --> 00:02:57,760
+and have neglected the weightier matters of the law,
+
+42
+00:02:58,740 --> 00:03:01,400
+justice and mercy and faithfulness.
+
+43
+00:03:01,880 --> 00:03:06,140
+These you ought to have done, without neglecting the others.
+
+44
+00:03:07,540 --> 00:03:09,360
+You blind guides!
+
+45
+00:03:10,020 --> 00:03:12,600
+Straining out a gnat and swallowing a camel?
+
+46
+00:03:13,480 --> 00:03:17,020
+Woe to you, scribes and Pharisees, hypocrites!
+
+47
+00:03:17,520 --> 00:03:20,200
+For you clean the outside of the cup and the plate,
+
+48
+00:03:20,200 --> 00:03:24,380
+but inside they are full of greed and self-indulgence.
+
+49
+00:03:25,860 --> 00:03:27,200
+You blind Pharisee!
+
+50
+00:03:27,780 --> 00:03:30,660
+First clean the inside of the cup and the plate,
+
+51
+00:03:30,860 --> 00:03:33,280
+that the outside also may be clean.
+
+52
+00:03:34,220 --> 00:03:38,080
+Woe to you, scribes and Pharisees, hypocrites!
+
+53
+00:03:39,040 --> 00:03:41,900
+For you are like whitewashed tombs,
+
+54
+00:03:42,140 --> 00:03:44,080
+which outwardly appear beautiful,
+
+55
+00:03:44,720 --> 00:03:49,100
+but within are full of dead people's bones and all uncleanness.
+
+56
+00:03:49,680 --> 00:03:53,300
+So you also outwardly appear righteous to others,
+
+57
+00:03:53,700 --> 00:03:57,460
+but within you are full of hypocrisy and lawlessness.
+
+58
+00:03:58,740 --> 00:04:03,020
+Woe to you, scribes and Pharisees, hypocrites!
+
+59
+00:04:04,020 --> 00:04:06,300
+For you build the tombs of the prophets
+
+60
+00:04:06,300 --> 00:04:08,840
+and decorate the monuments of the righteous,
+
+61
+00:04:09,460 --> 00:04:09,820
+saying,
+
+62
+00:04:10,300 --> 00:04:12,900
+If we had lived in the days of our fathers,
+
+63
+00:04:13,240 --> 00:04:15,260
+we would not have taken part with them
+
+64
+00:04:15,260 --> 00:04:17,060
+in shedding the blood of the prophets.
+
+65
+00:04:18,200 --> 00:04:20,640
+Thus you witness against yourselves
+
+66
+00:04:20,640 --> 00:04:23,760
+that you are sons of those who murdered the prophets.
+
+67
+00:04:24,480 --> 00:04:26,560
+Fill up, then, the measure of your fathers.
+
+68
+00:04:27,780 --> 00:04:29,580
+You serpents!
+
+69
+00:04:30,060 --> 00:04:31,440
+You brood of vipers!
+
+70
+00:04:31,980 --> 00:04:34,840
+How are you to escape being sentenced to hell?
+
+71
+00:04:35,540 --> 00:04:39,200
+Therefore I send you prophets and wise men and scribes,
+
+72
+00:04:39,440 --> 00:04:41,840
+some of whom you will kill and crucify,
+
+73
+00:04:41,840 --> 00:04:44,740
+and some you will flog in your synagogues
+
+74
+00:04:44,740 --> 00:04:46,920
+and persecute from town to town,
+
+75
+00:04:47,380 --> 00:04:51,140
+so that on you may come all the righteous blood shed on earth,
+
+76
+00:04:51,340 --> 00:04:53,280
+from the blood of innocent Abel
+
+77
+00:04:53,280 --> 00:04:56,240
+to the blood of Zechariah the son of Berechiah,
+
+78
+00:04:56,360 --> 00:04:57,460
+whom you murdered,
+
+79
+00:04:57,460 --> 00:04:59,660
+between the sanctuary and the altar.
+
+80
+00:05:00,480 --> 00:05:02,000
+Truly I say to you,
+
+81
+00:05:02,280 --> 00:05:05,380
+all these things will come upon this generation.
+
+82
+00:05:06,560 --> 00:05:08,340
+O Jerusalem!
+
+83
+00:05:09,240 --> 00:05:09,960
+Jerusalem!
+
+84
+00:05:10,900 --> 00:05:12,860
+The city that kills the prophets
+
+85
+00:05:12,860 --> 00:05:15,560
+and stones those who are sent to it!
+
+86
+00:05:16,300 --> 00:05:19,320
+How often would I have gathered your children together
+
+87
+00:05:19,320 --> 00:05:22,460
+as a hen gathers her brood under her wings,
+
+88
+00:05:23,040 --> 00:05:24,360
+and you would not!
+
+89
+00:05:25,560 --> 00:05:26,040
+See,
+
+90
+00:05:26,040 --> 00:05:27,040
+your house,
+
+91
+00:05:27,460 --> 00:05:29,080
+is left to you desolate.
+
+92
+00:05:30,160 --> 00:05:31,240
+For I tell you,
+
+93
+00:05:31,700 --> 00:05:33,460
+you will not see me again,
+
+94
+00:05:33,760 --> 00:05:34,960
+until you say,
+
+95
+00:05:35,500 --> 00:05:38,920
+Blessed is he who comes in the name of the Lord.
+

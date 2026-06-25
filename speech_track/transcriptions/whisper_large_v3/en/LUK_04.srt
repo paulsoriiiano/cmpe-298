@@ -1,0 +1,552 @@
+1
+00:00:00,300 --> 00:00:01,900
+Luke 4
+
+2
+00:00:01,900 --> 00:00:07,100
+And Jesus, full of the Holy Spirit, returned from the Jordan,
+
+3
+00:00:07,520 --> 00:00:10,640
+and was led by the Spirit in the wilderness for forty days,
+
+4
+00:00:11,160 --> 00:00:12,500
+being tempted by the devil.
+
+5
+00:00:13,060 --> 00:00:15,240
+And he ate nothing during those days,
+
+6
+00:00:15,500 --> 00:00:17,980
+and when they were ended, he was hungry.
+
+7
+00:00:18,720 --> 00:00:20,360
+The devil said to him,
+
+8
+00:00:21,160 --> 00:00:26,060
+If you are the Son of God,
+
+9
+00:00:26,060 --> 00:00:31,060
+command this stone to become bread.
+
+10
+00:00:32,260 --> 00:00:33,800
+And Jesus answered him,
+
+11
+00:00:34,560 --> 00:00:38,040
+It is written, Man shall not live by bread alone.
+
+12
+00:00:38,900 --> 00:00:43,800
+And the devil took him up and showed him all the kingdoms of the world in a moment of time,
+
+13
+00:00:44,120 --> 00:00:45,240
+and said to him,
+
+14
+00:00:46,500 --> 00:00:54,220
+To you I will give all this authority and their glory,
+
+15
+00:00:54,220 --> 00:00:56,040
+for it has been given to you.
+
+16
+00:00:56,060 --> 00:00:59,140
+It has been delivered to me,
+
+17
+00:00:59,600 --> 00:01:03,760
+and I give it to whom I will.
+
+18
+00:01:04,980 --> 00:01:08,880
+If you then will worship me,
+
+19
+00:01:09,800 --> 00:01:13,660
+it will all be yours.
+
+20
+00:01:15,000 --> 00:01:16,780
+And Jesus answered him,
+
+21
+00:01:17,460 --> 00:01:18,720
+It is written,
+
+22
+00:01:19,300 --> 00:01:22,920
+You shall worship the Lord your God, and him only shall you serve.
+
+23
+00:01:23,220 --> 00:01:25,040
+And he took him to Jerusalem,
+
+24
+00:01:25,040 --> 00:01:27,340
+and set him on the pinnacle of the temple,
+
+25
+00:01:27,340 --> 00:01:28,620
+and said to him,
+
+26
+00:01:29,900 --> 00:01:33,740
+If you are the Son of God,
+
+27
+00:01:33,740 --> 00:01:36,940
+throw yourself down from here,
+
+28
+00:01:36,940 --> 00:01:39,940
+for it is written,
+
+29
+00:01:39,940 --> 00:01:47,540
+He will command his angels concerning you to guard you,
+
+30
+00:01:47,540 --> 00:01:52,280
+and on their hands they will bear you up,
+
+31
+00:01:52,280 --> 00:01:54,840
+lest you strike your foot.
+
+32
+00:01:54,840 --> 00:01:59,860
+And Jesus answered him,
+
+33
+00:02:00,600 --> 00:02:01,660
+It is said,
+
+34
+00:02:02,000 --> 00:02:04,820
+You shall not put the Lord your God to the test.
+
+35
+00:02:05,540 --> 00:02:07,760
+And when the devil had ended every temptation,
+
+36
+00:02:07,760 --> 00:02:11,180
+he departed from him until an opportune time.
+
+37
+00:02:12,380 --> 00:02:15,780
+And Jesus returned in the power of the Spirit to Galilee,
+
+38
+00:02:16,060 --> 00:02:19,440
+and a report about him went out through all the surrounding country,
+
+39
+00:02:19,800 --> 00:02:23,920
+and he taught in their synagogues, being glorified by all.
+
+40
+00:02:24,840 --> 00:02:28,700
+And he came to Nazareth, where he had been brought up.
+
+41
+00:02:29,700 --> 00:02:31,340
+And as was his custom,
+
+42
+00:02:31,740 --> 00:02:34,060
+he went to the synagogue on the Sabbath day,
+
+43
+00:02:34,320 --> 00:02:35,720
+and he stood up to read.
+
+44
+00:02:36,420 --> 00:02:39,460
+And the scroll of the prophet Isaiah was given to him.
+
+45
+00:02:39,760 --> 00:02:41,300
+He unrolled the scroll,
+
+46
+00:02:41,760 --> 00:02:43,300
+and found the place where it was written,
+
+47
+00:02:43,500 --> 00:02:46,040
+The Spirit of the Lord is upon me,
+
+48
+00:02:46,360 --> 00:02:49,360
+because he has anointed me to proclaim good news to the poor.
+
+49
+00:02:50,020 --> 00:02:53,040
+He has sent me to proclaim liberty to the captives,
+
+50
+00:02:53,380 --> 00:02:54,820
+and recovering of sight to the blind,
+
+51
+00:02:55,100 --> 00:02:57,740
+to set at liberty those who are oppressed,
+
+52
+00:02:57,740 --> 00:03:00,740
+to proclaim the year of the Lord's favor.
+
+53
+00:03:01,740 --> 00:03:02,860
+And he rolled up the scroll,
+
+54
+00:03:03,000 --> 00:03:05,300
+and gave it back to the attendant, and sat down.
+
+55
+00:03:05,940 --> 00:03:09,060
+And the eyes of all in the synagogue were fixed on him.
+
+56
+00:03:09,560 --> 00:03:11,200
+And he began to say to them,
+
+57
+00:03:11,840 --> 00:03:15,520
+Today this scripture has been fulfilled in your hearing.
+
+58
+00:03:16,220 --> 00:03:18,080
+And all spoke well of him,
+
+59
+00:03:18,280 --> 00:03:22,060
+and marveled at the gracious words that were coming from his mouth.
+
+60
+00:03:22,620 --> 00:03:23,560
+And they said,
+
+61
+00:03:23,900 --> 00:03:24,620
+Is not the Lord your God?
+
+62
+00:03:24,620 --> 00:03:25,980
+Is not this Joseph's son?
+
+63
+00:03:26,700 --> 00:03:27,640
+And he said to them,
+
+64
+00:03:28,180 --> 00:03:30,200
+Doubtless you will quote to me this proverb,
+
+65
+00:03:30,700 --> 00:03:32,060
+Physician, heal yourself.
+
+66
+00:03:33,000 --> 00:03:35,240
+What we have heard you did at Capernaum,
+
+67
+00:03:35,700 --> 00:03:37,480
+do here in your hometown as well.
+
+68
+00:03:38,180 --> 00:03:38,960
+And he said,
+
+69
+00:03:39,680 --> 00:03:41,120
+Truly I say to you,
+
+70
+00:03:41,420 --> 00:03:43,720
+no prophet is acceptable in his hometown.
+
+71
+00:03:44,320 --> 00:03:45,840
+But in truth I tell you,
+
+72
+00:03:46,140 --> 00:03:48,820
+there were many widows in Israel in the days of Elijah,
+
+73
+00:03:49,200 --> 00:03:52,160
+when the heavens were shut up three years and six months,
+
+74
+00:03:52,160 --> 00:03:54,600
+and a great famine came over all the land,
+
+75
+00:03:55,140 --> 00:03:57,320
+and Elijah was sent to none of them,
+
+76
+00:03:57,620 --> 00:04:00,420
+but only to Zarephath, in the land of Sidon,
+
+77
+00:04:00,760 --> 00:04:02,040
+to a woman who was a widow.
+
+78
+00:04:02,700 --> 00:04:06,680
+And there were many lepers in Israel in the time of the prophet Elisha,
+
+79
+00:04:06,960 --> 00:04:08,720
+and none of them was cleansed,
+
+80
+00:04:08,980 --> 00:04:10,580
+but only Naaman the Syrian.
+
+81
+00:04:11,380 --> 00:04:12,920
+When they heard these things,
+
+82
+00:04:13,240 --> 00:04:15,600
+all in the synagogue were filled with wrath.
+
+83
+00:04:16,060 --> 00:04:18,480
+And they rose up and drove him out of the town,
+
+84
+00:04:18,700 --> 00:04:21,840
+and brought him to the brow of the hill on which their town was built,
+
+85
+00:04:22,240 --> 00:04:24,540
+so that they could throw him down the cliff.
+
+86
+00:04:25,140 --> 00:04:26,860
+But passing through their midst,
+
+87
+00:04:27,380 --> 00:04:28,140
+he went away.
+
+88
+00:04:29,860 --> 00:04:32,700
+And he went down to Capernaum, a city of Galilee,
+
+89
+00:04:33,080 --> 00:04:35,180
+and he was teaching them on the Sabbath.
+
+90
+00:04:35,520 --> 00:04:37,360
+And they were astonished at his teaching,
+
+91
+00:04:37,720 --> 00:04:39,880
+for his word possessed authority.
+
+92
+00:04:40,620 --> 00:04:43,020
+And in the synagogue there was a man
+
+93
+00:04:43,020 --> 00:04:45,180
+who had the spirit of an unclean demon,
+
+94
+00:04:45,580 --> 00:04:47,640
+and he cried out with a loud voice,
+
+95
+00:04:48,500 --> 00:04:49,020
+Ha!
+
+96
+00:04:50,560 --> 00:04:53,680
+What have you to do with us,
+
+97
+00:04:53,680 --> 00:04:55,600
+Jesus of Nazareth?
+
+98
+00:04:56,180 --> 00:05:01,920
+Have you come to destroy us?
+
+99
+00:05:02,260 --> 00:05:04,860
+I know who you are,
+
+100
+00:05:05,360 --> 00:05:09,320
+the Holy One of God.
+
+101
+00:05:10,420 --> 00:05:12,880
+But Jesus rebuked him, saying,
+
+102
+00:05:13,640 --> 00:05:15,720
+Be silent, and come out of him.
+
+103
+00:05:16,280 --> 00:05:19,020
+And when the demon had thrown him down in their midst,
+
+104
+00:05:19,300 --> 00:05:22,140
+he came out of him, having done him no harm.
+
+105
+00:05:22,600 --> 00:05:23,640
+And they were all amazed,
+
+106
+00:05:23,680 --> 00:05:25,860
+and said to one another,
+
+107
+00:05:26,380 --> 00:05:27,620
+What is this word?
+
+108
+00:05:28,400 --> 00:05:29,840
+For with authority and power
+
+109
+00:05:29,840 --> 00:05:31,580
+he commands the unclean spirits,
+
+110
+00:05:31,720 --> 00:05:32,600
+and they come out.
+
+111
+00:05:33,060 --> 00:05:35,700
+And reports about him went out into every place
+
+112
+00:05:35,700 --> 00:05:36,940
+in the surrounding region.
+
+113
+00:05:38,160 --> 00:05:40,300
+And he arose and left the synagogue
+
+114
+00:05:40,300 --> 00:05:42,160
+and entered Simon's house.
+
+115
+00:05:42,920 --> 00:05:46,100
+Now Simon's mother-in-law was ill with a high fever,
+
+116
+00:05:46,400 --> 00:05:48,420
+and they appealed to him on her behalf.
+
+117
+00:05:49,000 --> 00:05:51,460
+And he stood over her and rebuked the fever,
+
+118
+00:05:51,940 --> 00:05:52,740
+and it left her.
+
+119
+00:05:53,200 --> 00:05:53,660
+And he said to her,
+
+120
+00:05:53,680 --> 00:05:56,520
+And immediately she rose and began to serve them.
+
+121
+00:05:57,800 --> 00:05:59,060
+Now when the sun was setting,
+
+122
+00:05:59,680 --> 00:06:01,680
+all those who had any who were sick
+
+123
+00:06:01,680 --> 00:06:03,920
+with various diseases brought them to him.
+
+124
+00:06:04,320 --> 00:06:06,940
+And he laid his hands on every one of them
+
+125
+00:06:06,940 --> 00:06:07,740
+and healed them.
+
+126
+00:06:08,360 --> 00:06:11,280
+And demons also came out of many, crying,
+
+127
+00:06:12,200 --> 00:06:14,600
+You are the Son of God!
+
+128
+00:06:15,840 --> 00:06:18,860
+But he rebuked them and would not allow them to speak,
+
+129
+00:06:19,180 --> 00:06:21,560
+because they knew that he was the Christ.
+
+130
+00:06:21,560 --> 00:06:23,540
+And when it was day,
+
+131
+00:06:23,680 --> 00:06:26,440
+he departed and went into a desolate place.
+
+132
+00:06:27,000 --> 00:06:29,200
+And the people sought him and came to him,
+
+133
+00:06:29,520 --> 00:06:31,740
+and would have kept him from leaving them.
+
+134
+00:06:32,340 --> 00:06:33,300
+But he said to them,
+
+135
+00:06:33,740 --> 00:06:36,660
+I must preach the good news of the kingdom of God
+
+136
+00:06:36,660 --> 00:06:38,200
+to the other towns as well,
+
+137
+00:06:38,660 --> 00:06:40,380
+for I was sent for this purpose.
+
+138
+00:06:41,180 --> 00:06:43,920
+And he was preaching in the synagogues of Judea.
+

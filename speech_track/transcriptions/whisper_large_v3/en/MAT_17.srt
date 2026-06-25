@@ -1,0 +1,308 @@
+1
+00:00:01,000 --> 00:00:02,200
+Matthew 17
+
+2
+00:00:02,200 --> 00:00:07,960
+And after six days Jesus took with him Peter and James and John his brother,
+
+3
+00:00:08,180 --> 00:00:10,960
+and led them up a high mountain by themselves.
+
+4
+00:00:11,460 --> 00:00:14,280
+And he was transfigured before them,
+
+5
+00:00:14,640 --> 00:00:19,320
+and his face shone like the sun, and his clothes became white as light.
+
+6
+00:00:19,820 --> 00:00:24,380
+And behold, there appeared to them Moses and Elijah talking with him.
+
+7
+00:00:24,800 --> 00:00:26,340
+And Peter said to Jesus,
+
+8
+00:00:26,900 --> 00:00:29,240
+Lord, it is good that we are here.
+
+9
+00:00:29,240 --> 00:00:32,080
+If you wish, I will make three tents here,
+
+10
+00:00:32,300 --> 00:00:36,040
+one for you, one for Moses, and one for Elijah.
+
+11
+00:00:36,880 --> 00:00:41,380
+He was still speaking when, behold, a bright cloud overshadowed them,
+
+12
+00:00:41,600 --> 00:00:43,460
+and a voice from the cloud said,
+
+13
+00:00:44,140 --> 00:00:49,100
+This is my beloved Son, with whom I am well pleased.
+
+14
+00:00:49,760 --> 00:00:50,880
+Listen to him.
+
+15
+00:00:51,920 --> 00:00:55,380
+When the disciples heard this, they fell on their faces and were terrified.
+
+16
+00:00:55,760 --> 00:00:58,060
+But Jesus came and touched them, saying,
+
+17
+00:00:58,060 --> 00:01:01,100
+Rise, and have no fear.
+
+18
+00:01:01,900 --> 00:01:06,340
+And when they lifted up their eyes, they saw no one but Jesus only.
+
+19
+00:01:06,980 --> 00:01:10,820
+And as they were coming down the mountain, Jesus commanded them,
+
+20
+00:01:11,560 --> 00:01:15,400
+Tell no one the vision until the Son of Man is raised from the dead.
+
+21
+00:01:16,140 --> 00:01:17,800
+And the disciples asked him,
+
+22
+00:01:18,500 --> 00:01:21,880
+Then why do the scribes say that first Elijah must come?
+
+23
+00:01:22,320 --> 00:01:23,180
+He answered,
+
+24
+00:01:23,740 --> 00:01:26,620
+Elijah does come, and he will restore all things.
+
+25
+00:01:26,620 --> 00:01:27,880
+But I tell you,
+
+26
+00:01:27,880 --> 00:01:31,020
+I tell you that Elijah has already come, and they did not recognize him,
+
+27
+00:01:31,360 --> 00:01:33,080
+but did to him whatever they pleased.
+
+28
+00:01:33,920 --> 00:01:37,460
+So also the Son of Man will certainly suffer at their hands.
+
+29
+00:01:38,140 --> 00:01:42,540
+Then the disciples understood that he was speaking to them of John the Baptist.
+
+30
+00:01:43,660 --> 00:01:48,480
+And when they came to the crowd, a man came up to him and, kneeling before him, said,
+
+31
+00:01:48,760 --> 00:01:55,120
+Lord, have mercy on my son, for he is an epileptic, and he suffers terribly,
+
+32
+00:01:55,120 --> 00:01:57,720
+for often he falls into the fire.
+
+33
+00:01:57,880 --> 00:01:59,880
+And often into the water.
+
+34
+00:01:59,880 --> 00:02:03,880
+And I brought him to your disciples, and they could not heal him.
+
+35
+00:02:04,580 --> 00:02:05,880
+And Jesus answered,
+
+36
+00:02:06,560 --> 00:02:09,560
+O faithless and twisted generation,
+
+37
+00:02:09,560 --> 00:02:11,560
+how long am I to be with you?
+
+38
+00:02:11,560 --> 00:02:14,560
+How long am I to bear with you?
+
+39
+00:02:14,560 --> 00:02:16,560
+Bring him here to me.
+
+40
+00:02:16,560 --> 00:02:18,560
+And Jesus rebuked the demon,
+
+41
+00:02:18,560 --> 00:02:22,060
+and it came out of him, and the boy was healed instantly.
+
+42
+00:02:22,060 --> 00:02:25,600
+Then the disciples came to Jesus privately and said,
+
+43
+00:02:25,600 --> 00:02:27,600
+Why could we not cast it out?
+
+44
+00:02:27,600 --> 00:02:29,600
+He said to them,
+
+45
+00:02:29,600 --> 00:02:31,600
+Because of your little faith.
+
+46
+00:02:31,600 --> 00:02:33,600
+For truly I say to you,
+
+47
+00:02:33,600 --> 00:02:35,600
+if you have faith like a grain of mustard seed,
+
+48
+00:02:35,600 --> 00:02:37,600
+you will say to this mountain,
+
+49
+00:02:37,600 --> 00:02:39,600
+Move from here to there,
+
+50
+00:02:39,600 --> 00:02:41,600
+and it will move,
+
+51
+00:02:41,600 --> 00:02:43,600
+and nothing will be impossible for you.
+
+52
+00:02:43,600 --> 00:02:45,600
+As they were gathering in Galilee,
+
+53
+00:02:45,600 --> 00:02:47,600
+Jesus said to them,
+
+54
+00:02:47,600 --> 00:02:51,600
+The Son of Man is about to be delivered into the hands of men,
+
+55
+00:02:51,600 --> 00:02:53,600
+and they will kill him,
+
+56
+00:02:53,600 --> 00:02:56,600
+and he will be raised on the third day.
+
+57
+00:02:56,600 --> 00:02:59,600
+And they were greatly distressed.
+
+58
+00:02:59,600 --> 00:03:01,600
+When they came to Capernaum,
+
+59
+00:03:01,600 --> 00:03:05,600
+the collectors of the two drachma tax went up to Peter and said,
+
+60
+00:03:05,600 --> 00:03:08,600
+Does your teacher not pay the tax?
+
+61
+00:03:08,600 --> 00:03:09,600
+He said,
+
+62
+00:03:09,600 --> 00:03:10,600
+Yes.
+
+63
+00:03:10,600 --> 00:03:12,600
+And when he came into the house,
+
+64
+00:03:12,600 --> 00:03:14,600
+Jesus spoke to him first, saying,
+
+65
+00:03:14,600 --> 00:03:16,600
+What do you think, Simon?
+
+66
+00:03:16,600 --> 00:03:20,600
+From whom do kings of the earth take toll or tax,
+
+67
+00:03:20,600 --> 00:03:22,600
+from their sons or from others?
+
+68
+00:03:22,600 --> 00:03:24,600
+And when he said,
+
+69
+00:03:24,600 --> 00:03:26,600
+From others?
+
+70
+00:03:26,600 --> 00:03:28,600
+Jesus said to him,
+
+71
+00:03:28,600 --> 00:03:30,600
+Then the sons are free.
+
+72
+00:03:30,600 --> 00:03:33,600
+However, not to give offense to them,
+
+73
+00:03:33,600 --> 00:03:35,600
+go to the sea and cast a hook
+
+74
+00:03:35,600 --> 00:03:37,600
+and take the first fish that comes up,
+
+75
+00:03:37,600 --> 00:03:39,600
+and when you open its mouth,
+
+76
+00:03:39,600 --> 00:03:41,600
+you will find a shekel.
+
+77
+00:03:41,600 --> 00:03:45,600
+Take that and give it to them for me and for yourself.
+

@@ -1,0 +1,56 @@
+1
+00:00:00,000 --> 00:00:02,860
+San Matthew Kapitulo 11
+
+2
+00:00:30,000 --> 00:00:59,980
+Matthew Kapitulo 11
+
+3
+00:01:00,000 --> 00:01:29,980
+Matthew Kapitulo 11
+
+4
+00:01:30,000 --> 00:01:59,980
+Matthew Kapitulo 11
+
+5
+00:02:00,000 --> 00:02:29,980
+Matthew Kapitulo 11
+
+6
+00:02:30,000 --> 00:02:59,980
+Matthew Kapitulo 11
+
+7
+00:03:00,000 --> 00:03:29,980
+Matthew Kapitulo 11
+
+8
+00:03:30,000 --> 00:03:59,980
+Matthew Kapitulo 11
+
+9
+00:04:00,000 --> 00:04:29,980
+Matthew Kapitulo 11
+
+10
+00:04:30,000 --> 00:04:59,980
+Matthew Kapitulo 11
+
+11
+00:05:00,000 --> 00:05:29,980
+Matthew Kapitulo 11
+
+12
+00:05:30,000 --> 00:05:59,980
+Matthew Kapitulo 11
+
+13
+00:06:00,000 --> 00:06:02,020
+Matthew Kapitulo 12
+
+14
+00:06:02,020 --> 00:06:14,760
+Matthew Kapitulo 13
+

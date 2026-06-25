@@ -1,0 +1,408 @@
+1
+00:00:00,640 --> 00:00:01,680
+Matthew 11
+
+2
+00:00:01,680 --> 00:00:05,980
+When Jesus had finished instructing his twelve disciples,
+
+3
+00:00:06,140 --> 00:00:09,000
+he went on from there to teach and preach in their cities.
+
+4
+00:00:09,660 --> 00:00:12,880
+Now when John heard in prison about the deeds of the Christ,
+
+5
+00:00:13,300 --> 00:00:16,160
+he sent word by his disciples and said to him,
+
+6
+00:00:16,840 --> 00:00:19,740
+Are you the one who is to come, or shall we look for another?
+
+7
+00:00:20,520 --> 00:00:21,960
+And Jesus answered them,
+
+8
+00:00:22,680 --> 00:00:25,600
+Go, and tell John what you hear and see.
+
+9
+00:00:26,080 --> 00:00:29,180
+The blind receive their sight, and the lame walk.
+
+10
+00:00:29,180 --> 00:00:33,540
+Look, lepers are cleansed, and the deaf hear, and the dead are raised up,
+
+11
+00:00:33,860 --> 00:00:36,840
+and the poor have good news preached to them.
+
+12
+00:00:37,420 --> 00:00:40,720
+And blessed is the one who is not offended by me.
+
+13
+00:00:41,160 --> 00:00:45,780
+As they went away, Jesus began to speak to the crowds concerning John.
+
+14
+00:00:46,200 --> 00:00:49,140
+What did you go out into the wilderness to see?
+
+15
+00:00:49,600 --> 00:00:51,500
+A reed shaken by the wind.
+
+16
+00:00:52,140 --> 00:00:54,200
+What then did you go out to see?
+
+17
+00:00:54,620 --> 00:00:56,460
+A man dressed in soft clothing?
+
+18
+00:00:57,420 --> 00:00:58,060
+Behold,
+
+19
+00:00:58,300 --> 00:00:59,160
+those who were in the wilderness,
+
+20
+00:00:59,160 --> 00:01:01,340
+those who wear soft clothing are in kings' houses.
+
+21
+00:01:02,120 --> 00:01:04,240
+What then did you go out to see?
+
+22
+00:01:04,600 --> 00:01:05,300
+A prophet?
+
+23
+00:01:06,060 --> 00:01:08,760
+Yes, I tell you, and more than a prophet.
+
+24
+00:01:09,420 --> 00:01:11,340
+This is he of whom it is written,
+
+25
+00:01:12,100 --> 00:01:15,880
+Behold, I send my messenger before your face,
+
+26
+00:01:16,060 --> 00:01:18,580
+who will prepare your way before you.
+
+27
+00:01:19,480 --> 00:01:20,840
+Truly I say to you,
+
+28
+00:01:21,280 --> 00:01:22,780
+among those born of women,
+
+29
+00:01:23,100 --> 00:01:25,940
+there has arisen no one greater than John the Baptist.
+
+30
+00:01:26,360 --> 00:01:29,140
+Yet the one who is least in the kingdom of heaven,
+
+31
+00:01:29,160 --> 00:01:30,740
+is greater than he.
+
+32
+00:01:31,560 --> 00:01:34,120
+From the days of John the Baptist until now,
+
+33
+00:01:34,600 --> 00:01:36,160
+the kingdom of heaven has suffered violence,
+
+34
+00:01:37,140 --> 00:01:39,100
+and the violent take it by force.
+
+35
+00:01:39,660 --> 00:01:43,120
+For all the prophets in the law prophesied until John.
+
+36
+00:01:43,640 --> 00:01:45,900
+And if you are willing to accept it,
+
+37
+00:01:46,420 --> 00:01:48,740
+he is Elijah who is to come.
+
+38
+00:01:49,540 --> 00:01:51,500
+He who has ears to hear,
+
+39
+00:01:51,940 --> 00:01:53,000
+let him hear.
+
+40
+00:01:54,940 --> 00:01:57,160
+But to what shall I compare this generation?
+
+41
+00:01:57,160 --> 00:01:57,800
+To this generation.
+
+42
+00:01:59,160 --> 00:02:01,940
+It is like children sitting in the marketplaces,
+
+43
+00:02:02,360 --> 00:02:04,060
+and calling to their playmates.
+
+44
+00:02:04,600 --> 00:02:06,300
+We played the flute for you,
+
+45
+00:02:06,560 --> 00:02:07,860
+and you did not dance.
+
+46
+00:02:08,280 --> 00:02:10,860
+We sing a dirge, and you did not mourn.
+
+47
+00:02:11,400 --> 00:02:13,860
+For John came neither eating nor drinking,
+
+48
+00:02:14,240 --> 00:02:15,020
+and they say,
+
+49
+00:02:15,460 --> 00:02:16,600
+He has a demon.
+
+50
+00:02:17,420 --> 00:02:19,460
+The Son of Man came eating and drinking,
+
+51
+00:02:19,580 --> 00:02:20,220
+and they say,
+
+52
+00:02:20,720 --> 00:02:21,760
+Look at him,
+
+53
+00:02:22,100 --> 00:02:23,940
+a glutton and a drunkard,
+
+54
+00:02:23,940 --> 00:02:26,900
+a friend of tax collectors and sinners.
+
+55
+00:02:28,440 --> 00:02:29,080
+Yet,
+
+56
+00:02:29,160 --> 00:02:32,460
+his wisdom is justified by her deeds.
+
+57
+00:02:33,460 --> 00:02:37,160
+Then he began to denounce the cities where most of his mighty works had been done,
+
+58
+00:02:37,160 --> 00:02:39,160
+because they did not repent.
+
+59
+00:02:39,160 --> 00:02:41,160
+Woe to you, Chorazin!
+
+60
+00:02:41,160 --> 00:02:43,160
+Woe to you, Bethsaida!
+
+61
+00:02:43,160 --> 00:02:49,160
+For if the mighty works done in you had been done in Tyre and Sidon,
+
+62
+00:02:49,160 --> 00:02:54,160
+they would have repented long ago in sackcloth and ashes.
+
+63
+00:02:54,160 --> 00:02:56,160
+But I tell you,
+
+64
+00:02:56,160 --> 00:02:59,160
+it will be more bearable on the day of judgment,
+
+65
+00:02:59,160 --> 00:03:01,160
+for Tyre and Sidon,
+
+66
+00:03:01,160 --> 00:03:03,160
+than for you.
+
+67
+00:03:03,160 --> 00:03:05,160
+And you, Capernaum,
+
+68
+00:03:05,160 --> 00:03:07,160
+will you be exalted to heaven?
+
+69
+00:03:07,160 --> 00:03:11,160
+You will be brought down to Hades.
+
+70
+00:03:11,160 --> 00:03:13,160
+For if the mighty works done in you
+
+71
+00:03:13,160 --> 00:03:15,160
+had been done in Sodom,
+
+72
+00:03:15,160 --> 00:03:17,160
+it would have remained until this day.
+
+73
+00:03:17,160 --> 00:03:19,160
+But I tell you,
+
+74
+00:03:19,160 --> 00:03:21,160
+that it will be more tolerable on the day of judgment
+
+75
+00:03:21,160 --> 00:03:23,160
+for the land of Sodom,
+
+76
+00:03:23,160 --> 00:03:25,160
+than for you.
+
+77
+00:03:25,160 --> 00:03:27,160
+At that time Jesus declared,
+
+78
+00:03:27,160 --> 00:03:29,160
+I thank you, Father,
+
+79
+00:03:29,160 --> 00:03:31,160
+Lord of heaven and earth,
+
+80
+00:03:31,160 --> 00:03:33,160
+that you have hidden these things
+
+81
+00:03:33,160 --> 00:03:35,160
+from the wise and understanding,
+
+82
+00:03:35,160 --> 00:03:37,160
+and revealed them to little children.
+
+83
+00:03:37,160 --> 00:03:39,160
+Yes, Father,
+
+84
+00:03:39,160 --> 00:03:41,160
+for such was your gracious will.
+
+85
+00:03:41,160 --> 00:03:43,160
+All things have been handed over
+
+86
+00:03:43,160 --> 00:03:45,160
+to me by my Father,
+
+87
+00:03:45,160 --> 00:03:47,160
+and no one knows the Son except the Father,
+
+88
+00:03:47,160 --> 00:03:49,160
+and no one knows the Father
+
+89
+00:03:49,160 --> 00:03:51,160
+except the Son,
+
+90
+00:03:51,160 --> 00:03:53,160
+and anyone to whom the Son
+
+91
+00:03:53,160 --> 00:03:55,160
+chooses to reveal him.
+
+92
+00:03:55,160 --> 00:03:57,160
+Come to me,
+
+93
+00:03:57,160 --> 00:03:59,160
+all who labor
+
+94
+00:03:59,160 --> 00:04:01,160
+and are heavy laden,
+
+95
+00:04:01,160 --> 00:04:03,160
+and I will give you rest.
+
+96
+00:04:03,160 --> 00:04:05,160
+Take my yoke upon you,
+
+97
+00:04:05,160 --> 00:04:07,160
+and learn from me,
+
+98
+00:04:07,160 --> 00:04:09,160
+for I am gentle and lowly in heart,
+
+99
+00:04:09,160 --> 00:04:11,160
+and you will find rest
+
+100
+00:04:11,160 --> 00:04:13,160
+for your souls.
+
+101
+00:04:13,160 --> 00:04:15,160
+For my yoke is easy,
+
+102
+00:04:15,160 --> 00:04:17,160
+and my burden is light.
+

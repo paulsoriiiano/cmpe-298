@@ -1,0 +1,848 @@
+1
+00:00:00,960 --> 00:00:02,240
+Matthew 26
+
+2
+00:00:02,240 --> 00:00:07,620
+When Jesus had finished all these sayings, he said to his disciples,
+
+3
+00:00:08,520 --> 00:00:11,780
+You know that after two days the Passover is coming,
+
+4
+00:00:12,160 --> 00:00:15,680
+and the Son of Man will be delivered up to be crucified.
+
+5
+00:00:16,780 --> 00:00:21,360
+Then the chief priests and the elders of the people gathered in the palace of the high priest,
+
+6
+00:00:21,520 --> 00:00:27,740
+whose name was Caiaphas, and plotted together in order to arrest Jesus by stealth and kill him.
+
+7
+00:00:27,740 --> 00:00:34,180
+But they said, Not during the feast, lest there be an uproar among the people.
+
+8
+00:00:35,820 --> 00:00:39,700
+Now when Jesus was at Bethany in the house of Simon the leper,
+
+9
+00:00:40,080 --> 00:00:44,780
+a woman came up to him with an alabaster flask of very expensive ointment,
+
+10
+00:00:45,200 --> 00:00:48,060
+and she poured it on his head as he reclined at table.
+
+11
+00:00:48,720 --> 00:00:51,260
+And when the disciples saw it, they were indignant, saying,
+
+12
+00:00:51,700 --> 00:00:57,540
+Why this waste? For this could have been sold for a large sum, and given to the poor.
+
+13
+00:00:58,420 --> 00:01:01,560
+But Jesus, aware of this, said to them,
+
+14
+00:01:02,180 --> 00:01:06,840
+Why do you trouble the woman? For she has done a beautiful thing to me.
+
+15
+00:01:07,560 --> 00:01:11,740
+For you always have the poor with you, but you will not always have me.
+
+16
+00:01:12,660 --> 00:01:17,020
+In pouring this ointment on my body, she has done it to prepare me for burial.
+
+17
+00:01:17,940 --> 00:01:22,560
+Truly I say to you, wherever this gospel is proclaimed in the whole world,
+
+18
+00:01:22,980 --> 00:01:26,820
+what she has done will also be told in memory of her.
+
+19
+00:01:27,740 --> 00:01:32,760
+Then one of the twelve, whose name was Judas Iscariot, went to the chief priests, and said,
+
+20
+00:01:33,460 --> 00:01:36,120
+What will you give me if I deliver him over to you?
+
+21
+00:01:36,700 --> 00:01:39,000
+And they paid him thirty pieces of silver.
+
+22
+00:01:39,560 --> 00:01:43,220
+And from that moment he sought an opportunity to betray him.
+
+23
+00:01:43,920 --> 00:01:48,820
+Now on the first day of unleavened bread the disciples came to Jesus, saying,
+
+24
+00:01:49,560 --> 00:01:52,220
+Where will you have us prepare for you to eat the Passover?
+
+25
+00:01:53,040 --> 00:01:56,860
+He said, Go into the city to a certain man and say to him,
+
+26
+00:01:56,860 --> 00:01:59,840
+The teacher says, My time is at hand.
+
+27
+00:02:00,160 --> 00:02:03,060
+I will keep the Passover at your house with my disciples.
+
+28
+00:02:03,620 --> 00:02:08,060
+And the disciples did as Jesus had directed them, and they prepared the Passover.
+
+29
+00:02:08,820 --> 00:02:12,400
+When it was evening, he reclined at table with the twelve.
+
+30
+00:02:13,100 --> 00:02:14,920
+And as they were eating, he said,
+
+31
+00:02:15,680 --> 00:02:19,840
+Truly I say to you, one of you will betray me.
+
+32
+00:02:20,240 --> 00:02:24,400
+And they were very sorrowful and began to say to him one after another,
+
+33
+00:02:24,880 --> 00:02:26,740
+Is it I, Lord?
+
+34
+00:02:27,480 --> 00:02:28,240
+He answered,
+
+35
+00:02:29,140 --> 00:02:32,620
+He who has dipped his hand in the dish with me will betray me.
+
+36
+00:02:33,240 --> 00:02:35,920
+The Son of Man goes as it is written of him.
+
+37
+00:02:36,440 --> 00:02:39,580
+But woe to that man by whom the Son of Man is betrayed.
+
+38
+00:02:40,340 --> 00:02:44,020
+It would have been better for that man if he had not been born.
+
+39
+00:02:45,080 --> 00:02:47,940
+Judas, who would betray him, answered,
+
+40
+00:02:48,660 --> 00:02:49,820
+Is it I, Rabbi?
+
+41
+00:02:50,300 --> 00:02:51,780
+He said to him,
+
+42
+00:02:52,720 --> 00:02:54,040
+You have said so.
+
+43
+00:02:54,860 --> 00:02:56,820
+Now as they were eating, Jesus took bread,
+
+44
+00:02:57,480 --> 00:02:59,680
+and after blessing it, broke it,
+
+45
+00:03:00,280 --> 00:03:02,220
+and gave it to the disciples and said,
+
+46
+00:03:02,920 --> 00:03:06,100
+Take, eat, this is my body.
+
+47
+00:03:06,460 --> 00:03:09,900
+And he took a cup, and when he had given thanks,
+
+48
+00:03:10,440 --> 00:03:11,680
+he gave it to them, saying,
+
+49
+00:03:12,560 --> 00:03:16,800
+Drink of it, all of you, for this is my blood of the covenant,
+
+50
+00:03:17,280 --> 00:03:20,680
+which is poured out for many for the forgiveness of sins.
+
+51
+00:03:21,680 --> 00:03:25,660
+I tell you, I will not drink again of this fruit of the vine
+
+52
+00:03:25,660 --> 00:03:26,840
+until that day when I am dead.
+
+53
+00:03:26,840 --> 00:03:29,560
+And I drink it new with you in my Father's kingdom.
+
+54
+00:03:30,700 --> 00:03:32,900
+And when they had sung a hymn,
+
+55
+00:03:33,340 --> 00:03:35,300
+they went out to the Mount of Olives.
+
+56
+00:03:36,040 --> 00:03:37,580
+Then Jesus said to them,
+
+57
+00:03:38,480 --> 00:03:41,360
+You will all fall away because of me this night,
+
+58
+00:03:41,780 --> 00:03:42,620
+for it is written,
+
+59
+00:03:43,280 --> 00:03:44,520
+I will strike the shepherd,
+
+60
+00:03:44,700 --> 00:03:46,660
+and the sheep of the flock will be scattered.
+
+61
+00:03:47,460 --> 00:03:49,140
+But after I am raised up,
+
+62
+00:03:49,500 --> 00:03:51,540
+I will go before you to Galilee.
+
+63
+00:03:52,300 --> 00:03:53,260
+Peter answered him,
+
+64
+00:03:53,960 --> 00:03:56,100
+Though they all fall away because of you,
+
+65
+00:03:56,100 --> 00:03:58,040
+I will never fall away.
+
+66
+00:03:58,800 --> 00:04:00,080
+Jesus said to him,
+
+67
+00:04:00,960 --> 00:04:02,280
+Truly I tell you,
+
+68
+00:04:02,660 --> 00:04:05,420
+this very night before the rooster crows,
+
+69
+00:04:06,040 --> 00:04:08,480
+you will deny me three times.
+
+70
+00:04:09,300 --> 00:04:10,120
+Peter said to him,
+
+71
+00:04:10,880 --> 00:04:12,900
+Even if I must die with you,
+
+72
+00:04:13,400 --> 00:04:15,260
+I will not deny you.
+
+73
+00:04:15,920 --> 00:04:17,760
+And all the disciples said the same.
+
+74
+00:04:18,620 --> 00:04:21,920
+Then Jesus went with them to a place called Gethsemane,
+
+75
+00:04:22,420 --> 00:04:23,940
+and he said to his disciples,
+
+76
+00:04:24,540 --> 00:04:25,460
+Sit here,
+
+77
+00:04:25,460 --> 00:04:27,320
+while I go over there and pray.
+
+78
+00:04:28,140 --> 00:04:31,360
+And taking with him Peter and the two sons of Zebedee,
+
+79
+00:04:31,440 --> 00:04:33,620
+he began to be sorrowful and troubled.
+
+80
+00:04:34,040 --> 00:04:35,300
+Then he said to them,
+
+81
+00:04:36,000 --> 00:04:38,020
+My soul is very sorrowful,
+
+82
+00:04:38,440 --> 00:04:39,560
+even to death.
+
+83
+00:04:40,380 --> 00:04:42,680
+Remain here and watch with me.
+
+84
+00:04:43,360 --> 00:04:44,660
+And going a little farther,
+
+85
+00:04:44,800 --> 00:04:47,460
+he fell on his face and prayed, saying,
+
+86
+00:04:48,280 --> 00:04:48,980
+My father,
+
+87
+00:04:49,320 --> 00:04:51,120
+if it be possible,
+
+88
+00:04:51,700 --> 00:04:53,560
+let this cup pass from me.
+
+89
+00:04:54,320 --> 00:04:54,960
+Nevertheless,
+
+90
+00:04:55,460 --> 00:04:58,040
+not as I will,
+
+91
+00:04:58,800 --> 00:04:59,800
+but as you will.
+
+92
+00:05:00,520 --> 00:05:03,720
+And he came to the disciples and found them sleeping.
+
+93
+00:05:04,540 --> 00:05:06,060
+And he said to Peter,
+
+94
+00:05:06,840 --> 00:05:09,640
+So could you not watch with me one hour?
+
+95
+00:05:10,560 --> 00:05:14,140
+Watch and pray that you may not enter into temptation.
+
+96
+00:05:14,940 --> 00:05:16,880
+The spirit indeed is willing,
+
+97
+00:05:17,560 --> 00:05:19,000
+but the flesh is weak.
+
+98
+00:05:19,860 --> 00:05:23,000
+Again for the second time he went away and prayed,
+
+99
+00:05:24,140 --> 00:05:25,260
+My father,
+
+100
+00:05:25,460 --> 00:05:28,560
+if this cannot pass unless I drink it,
+
+101
+00:05:29,420 --> 00:05:30,700
+your will be done.
+
+102
+00:05:31,640 --> 00:05:33,980
+And again he came and found them sleeping,
+
+103
+00:05:34,160 --> 00:05:35,460
+for their eyes were heavy.
+
+104
+00:05:36,220 --> 00:05:36,560
+So,
+
+105
+00:05:37,260 --> 00:05:38,300
+leaving them again,
+
+106
+00:05:38,860 --> 00:05:41,280
+he went away and prayed for the third time,
+
+107
+00:05:41,420 --> 00:05:43,320
+saying the same words again.
+
+108
+00:05:44,000 --> 00:05:46,640
+Then he came to the disciples and said to them,
+
+109
+00:05:47,360 --> 00:05:47,840
+Sleep,
+
+110
+00:05:48,320 --> 00:05:50,260
+and take your rest later on.
+
+111
+00:05:51,060 --> 00:05:51,560
+See,
+
+112
+00:05:52,020 --> 00:05:53,140
+the hour is at hand,
+
+113
+00:05:53,140 --> 00:05:55,440
+and the Son of Man is betrayed into the hands,
+
+114
+00:05:55,460 --> 00:05:56,280
+into the hands of sinners.
+
+115
+00:05:56,940 --> 00:05:57,340
+Rise,
+
+116
+00:05:57,480 --> 00:05:58,240
+let us be going.
+
+117
+00:05:58,820 --> 00:05:59,080
+See,
+
+118
+00:05:59,140 --> 00:06:00,560
+my betrayer is at hand.
+
+119
+00:06:01,260 --> 00:06:02,700
+While he was still speaking,
+
+120
+00:06:03,100 --> 00:06:03,760
+Judas came,
+
+121
+00:06:04,160 --> 00:06:05,020
+one of the twelve,
+
+122
+00:06:05,600 --> 00:06:08,920
+and with him a great crowd with swords and clubs
+
+123
+00:06:08,920 --> 00:06:11,200
+from the chief priests and the elders of the people.
+
+124
+00:06:11,780 --> 00:06:14,000
+Now the betrayer had given them a sign,
+
+125
+00:06:14,200 --> 00:06:14,540
+saying,
+
+126
+00:06:15,240 --> 00:06:16,620
+The one who will kiss is the man.
+
+127
+00:06:16,760 --> 00:06:17,300
+Seize him.
+
+128
+00:06:18,080 --> 00:06:20,360
+And he came up to Jesus at once and said,
+
+129
+00:06:21,000 --> 00:06:21,640
+Greetings,
+
+130
+00:06:22,060 --> 00:06:22,340
+Rabbi.
+
+131
+00:06:23,280 --> 00:06:24,080
+And he kissed him.
+
+132
+00:06:24,620 --> 00:06:25,440
+Jesus said,
+
+133
+00:06:25,460 --> 00:06:25,880
+And he said to him,
+
+134
+00:06:26,660 --> 00:06:27,120
+Friend,
+
+135
+00:06:27,840 --> 00:06:29,780
+do what you came to do.
+
+136
+00:06:30,560 --> 00:06:33,580
+Then they came up and laid hands on Jesus and seized him.
+
+137
+00:06:33,940 --> 00:06:34,420
+And behold,
+
+138
+00:06:34,620 --> 00:06:37,960
+one of those who were with Jesus stretched out his hand and drew his sword
+
+139
+00:06:37,960 --> 00:06:40,940
+and struck the servant of the high priest and cut off his ear.
+
+140
+00:06:41,500 --> 00:06:42,740
+Then Jesus said to him,
+
+141
+00:06:43,520 --> 00:06:45,320
+Put your sword back into its place,
+
+142
+00:06:46,000 --> 00:06:48,880
+for all who take the sword will perish by the sword.
+
+143
+00:06:49,660 --> 00:06:51,940
+Do you think that I cannot appeal to my father,
+
+144
+00:06:51,940 --> 00:06:55,180
+and he will at once send me more than twelve legions of angels?
+
+145
+00:06:55,880 --> 00:06:59,880
+But how then should the scriptures be fulfilled that it must be so?
+
+146
+00:07:00,540 --> 00:07:02,720
+At that hour Jesus said to the crowds,
+
+147
+00:07:03,160 --> 00:07:05,520
+Have you come out as against a robber,
+
+148
+00:07:05,940 --> 00:07:08,020
+with swords and clubs to capture me?
+
+149
+00:07:08,680 --> 00:07:11,400
+Day after day I sat in the temple teaching,
+
+150
+00:07:11,740 --> 00:07:13,160
+and you did not seize me.
+
+151
+00:07:13,820 --> 00:07:18,500
+But all this has taken place that the scriptures of the prophets might be fulfilled.
+
+152
+00:07:19,300 --> 00:07:22,260
+Then all the disciples left him and fled.
+
+153
+00:07:22,840 --> 00:07:25,300
+Then those who had seized Jesus led him to Caiaphas,
+
+154
+00:07:25,760 --> 00:07:26,460
+the high priest,
+
+155
+00:07:26,560 --> 00:07:28,600
+where the scribes and the elders had gathered.
+
+156
+00:07:29,540 --> 00:07:31,500
+And Peter was following him at a distance,
+
+157
+00:07:31,660 --> 00:07:34,140
+as far as the courtyard of the high priest,
+
+158
+00:07:34,140 --> 00:07:37,800
+and going inside he sat with the guards to see the end.
+
+159
+00:07:38,560 --> 00:07:43,000
+Now the chief priests and the whole council were seeking false testimony against Jesus
+
+160
+00:07:43,000 --> 00:07:44,380
+that they might put him to death,
+
+161
+00:07:44,940 --> 00:07:46,080
+but they found none,
+
+162
+00:07:46,540 --> 00:07:49,040
+though many false witnesses came forward.
+
+163
+00:07:49,540 --> 00:07:51,700
+At last two came forward and said,
+
+164
+00:07:52,440 --> 00:07:53,400
+This man said,
+
+165
+00:07:53,760 --> 00:07:55,440
+I am able to destroy the temple,
+
+166
+00:07:55,440 --> 00:07:58,200
+and to rebuild it in three days.
+
+167
+00:07:58,780 --> 00:08:01,500
+And the high priest stood up and said,
+
+168
+00:08:02,260 --> 00:08:04,200
+Have you no answer to make?
+
+169
+00:08:04,540 --> 00:08:08,140
+What is it that these men testify against you?
+
+170
+00:08:08,860 --> 00:08:10,880
+But Jesus remained silent,
+
+171
+00:08:11,440 --> 00:08:12,900
+and the high priest said to him,
+
+172
+00:08:13,640 --> 00:08:16,180
+I adjure you by the living God,
+
+173
+00:08:16,560 --> 00:08:18,360
+tell us if you are the Christ,
+
+174
+00:08:18,820 --> 00:08:20,360
+the Son of God.
+
+175
+00:08:20,960 --> 00:08:22,740
+Jesus said to him,
+
+176
+00:08:23,080 --> 00:08:24,620
+You have said so,
+
+177
+00:08:24,620 --> 00:08:25,900
+but I tell you,
+
+178
+00:08:26,320 --> 00:08:30,080
+from now on you will see the Son of Man seated at the right hand of power,
+
+179
+00:08:30,400 --> 00:08:32,220
+and coming on the clouds of heaven.
+
+180
+00:08:33,120 --> 00:08:36,240
+Then the high priest tore his robes and said,
+
+181
+00:08:37,060 --> 00:08:38,660
+He has uttered blasphemy.
+
+182
+00:08:39,020 --> 00:08:41,800
+What further witnesses do we need?
+
+183
+00:08:42,500 --> 00:08:44,940
+You have now heard his blasphemy.
+
+184
+00:08:45,320 --> 00:08:46,600
+What is your judgment?
+
+185
+00:08:47,540 --> 00:08:48,420
+They answered,
+
+186
+00:08:49,240 --> 00:08:50,860
+He deserves death.
+
+187
+00:08:51,860 --> 00:08:54,540
+Then they spit in his face and struck him,
+
+188
+00:08:54,620 --> 00:08:56,420
+and some slapped him, saying,
+
+189
+00:08:56,800 --> 00:08:58,800
+Prophesy to us, you Christ.
+
+190
+00:08:59,340 --> 00:09:00,520
+Who is it that struck you?
+
+191
+00:09:01,200 --> 00:09:04,460
+Now Peter was sitting outside in the courtyard,
+
+192
+00:09:05,020 --> 00:09:07,000
+and a servant girl came up to him and said,
+
+193
+00:09:07,740 --> 00:09:10,400
+You also were with Jesus the Galilean.
+
+194
+00:09:10,760 --> 00:09:12,580
+But he denied it before them all, saying,
+
+195
+00:09:13,320 --> 00:09:15,140
+I do not know what you mean.
+
+196
+00:09:15,800 --> 00:09:17,600
+And when he went out to the entrance,
+
+197
+00:09:17,900 --> 00:09:19,360
+another servant girl saw him,
+
+198
+00:09:19,660 --> 00:09:21,040
+and she said to the bystanders,
+
+199
+00:09:21,500 --> 00:09:24,540
+This man was with Jesus of Nazareth,
+
+200
+00:09:25,260 --> 00:09:27,780
+and again he denied it, with an oath.
+
+201
+00:09:28,540 --> 00:09:30,300
+I do not know the man.
+
+202
+00:09:31,000 --> 00:09:34,100
+After a little while the bystanders came up and said to Peter,
+
+203
+00:09:34,860 --> 00:09:36,460
+Certainly you too are one of them,
+
+204
+00:09:36,460 --> 00:09:38,340
+for your accent betrays you.
+
+205
+00:09:39,020 --> 00:09:41,620
+Then he began to invoke a curse on himself,
+
+206
+00:09:41,880 --> 00:09:42,840
+and to swear,
+
+207
+00:09:43,620 --> 00:09:46,300
+I do not know the man.
+
+208
+00:09:46,980 --> 00:09:48,700
+And immediately the rooster crowed,
+
+209
+00:09:49,100 --> 00:09:51,760
+and Peter remembered the saying of Jesus,
+
+210
+00:09:52,620 --> 00:09:54,020
+Before the rooster crows,
+
+211
+00:09:54,620 --> 00:09:56,700
+you will deny me three times.
+
+212
+00:09:56,700 --> 00:10:00,640
+And he went out and wept bitterly.
+

@@ -1,0 +1,464 @@
+1
+00:00:00,960 --> 00:00:01,840
+Mark 12
+
+2
+00:00:01,840 --> 00:00:05,340
+And he began to speak to them in parables.
+
+3
+00:00:05,960 --> 00:00:10,780
+A man planted a vineyard, and put a fence around it, and dug a pit for the winepress,
+
+4
+00:00:11,000 --> 00:00:14,960
+and built a tower, and leased it to tenants, and went into another country.
+
+5
+00:00:16,140 --> 00:00:20,720
+When the season came, he sent a servant to the tenants to get from them some of the fruit
+
+6
+00:00:20,720 --> 00:00:21,360
+of the vineyard.
+
+7
+00:00:22,000 --> 00:00:25,780
+And they took him, and beat him, and sent him away empty-handed.
+
+8
+00:00:25,780 --> 00:00:31,420
+Again he sent to them another servant, and they struck him on the head, and treated him
+
+9
+00:00:31,420 --> 00:00:32,060
+shamefully.
+
+10
+00:00:32,580 --> 00:00:35,260
+And he sent another, and him they killed.
+
+11
+00:00:36,160 --> 00:00:40,200
+And so with many others, some they beat, and some they killed.
+
+12
+00:00:41,380 --> 00:00:44,280
+He had still one other, a beloved son.
+
+13
+00:00:44,940 --> 00:00:48,600
+Finally he sent him to them, saying, They will respect my son.
+
+14
+00:00:49,340 --> 00:00:53,260
+But those tenants said to one another, This is the heir.
+
+15
+00:00:53,260 --> 00:00:54,880
+Come, let us kill him.
+
+16
+00:00:54,880 --> 00:00:56,860
+And the inheritance will be ours.
+
+17
+00:00:57,620 --> 00:01:01,220
+And they took him, and killed him, and threw him out of the vineyard.
+
+18
+00:01:01,820 --> 00:01:04,000
+What will the owner of the vineyard do?
+
+19
+00:01:04,720 --> 00:01:08,400
+He will come and destroy the tenants, and give the vineyard to others.
+
+20
+00:01:09,400 --> 00:01:11,220
+Have you not read this scripture?
+
+21
+00:01:11,880 --> 00:01:15,940
+The stone that the builders rejected has become the cornerstone.
+
+22
+00:01:16,520 --> 00:01:20,620
+This was the Lord's doing, and it is marvelous in our eyes.
+
+23
+00:01:21,480 --> 00:01:24,760
+And they were seeking to arrest him, but feared the people.
+
+24
+00:01:24,880 --> 00:01:28,080
+For they perceived that he had told the parable against them.
+
+25
+00:01:28,460 --> 00:01:30,360
+So they left him, and went away.
+
+26
+00:01:31,620 --> 00:01:36,180
+And they sent to him some of the Pharisees, and some of the Herodians, to trap him in
+
+27
+00:01:36,180 --> 00:01:36,800
+his talk.
+
+28
+00:01:37,140 --> 00:01:45,000
+And they came and said to him, Teacher, we know that you are true, and do not care about
+
+29
+00:01:45,000 --> 00:01:46,140
+anyone's opinion.
+
+30
+00:01:47,160 --> 00:01:52,740
+For you are not swayed by appearances, but truly teach the way of God.
+
+31
+00:01:52,740 --> 00:01:54,660
+Is it lawful?
+
+32
+00:01:54,660 --> 00:01:58,480
+Is it lawful to pay taxes to Caesar, or not?
+
+33
+00:01:58,680 --> 00:02:01,840
+Should we pay them, or should we not?
+
+34
+00:02:02,740 --> 00:02:07,920
+But knowing their hypocrisy, he said to them, Why put me to the test?
+
+35
+00:02:08,580 --> 00:02:10,640
+Bring me a denarius, and let me look at it.
+
+36
+00:02:11,280 --> 00:02:16,600
+And they brought one, and he said to them, Whose likeness and inscription is this?
+
+37
+00:02:17,280 --> 00:02:20,440
+They said to him, Caesar's.
+
+38
+00:02:21,020 --> 00:02:24,440
+Jesus said to them, Render to Caesar the things that are in the Bible.
+
+39
+00:02:24,440 --> 00:02:24,520
+Render to Caesar the things that are in the Bible.
+
+40
+00:02:24,520 --> 00:02:24,640
+Render to Caesar the things that are in the Bible.
+
+41
+00:02:24,640 --> 00:02:28,980
+Render to God the things that are Caesar's, and to God the things that are God's.
+
+42
+00:02:29,700 --> 00:02:31,100
+And they marveled at him.
+
+43
+00:02:31,660 --> 00:02:37,300
+And Sadducees came to him, who say that there is no resurrection, and they asked him a question,
+
+44
+00:02:37,560 --> 00:02:45,360
+saying, Teacher, Moses wrote for us that if a man's brother dies and leaves a wife, but
+
+45
+00:02:45,360 --> 00:02:51,120
+leaves no child, the man must take the widow and raise up offspring for his brother.
+
+46
+00:02:52,080 --> 00:02:54,220
+There were seven brothers.
+
+47
+00:02:54,640 --> 00:02:58,940
+The first took a wife, and when he died, left no offspring.
+
+48
+00:02:59,720 --> 00:03:03,320
+And the second took her and died, leaving no offspring.
+
+49
+00:03:03,860 --> 00:03:05,420
+And the third likewise.
+
+50
+00:03:06,360 --> 00:03:08,720
+And the seven left no offspring.
+
+51
+00:03:09,420 --> 00:03:12,240
+Last of all, the woman also died.
+
+52
+00:03:12,980 --> 00:03:19,100
+In the resurrection, when they rise again, whose wife will she be?
+
+53
+00:03:19,500 --> 00:03:21,660
+For the seven had her as wife.
+
+54
+00:03:22,080 --> 00:03:23,360
+Jesus said to them,
+
+55
+00:03:23,360 --> 00:03:25,920
+Is this not the reason you are wrong?
+
+56
+00:03:26,300 --> 00:03:29,640
+Because you know neither the Scriptures nor the power of God.
+
+57
+00:03:30,520 --> 00:03:34,460
+For when they rise from the dead, they neither marry nor are given in marriage,
+
+58
+00:03:34,780 --> 00:03:36,440
+but are like angels in heaven.
+
+59
+00:03:36,960 --> 00:03:40,960
+And as for the dead being raised, have you not read in the book of Moses,
+
+60
+00:03:41,300 --> 00:03:44,600
+in the passage about the bush, how God spoke to him, saying,
+
+61
+00:03:45,040 --> 00:03:49,680
+I am the God of Abraham, and the God of Isaac, and the God of Jacob?
+
+62
+00:03:50,360 --> 00:03:52,640
+He is not God of the dead,
+
+63
+00:03:52,640 --> 00:03:53,800
+but of the living.
+
+64
+00:03:54,720 --> 00:03:56,240
+You are quite wrong.
+
+65
+00:03:57,080 --> 00:04:00,600
+And one of the scribes came up and heard them disputing with one another,
+
+66
+00:04:00,880 --> 00:04:03,580
+and seeing that he answered them well, asked him,
+
+67
+00:04:04,300 --> 00:04:07,420
+Which commandment is the most important of all?
+
+68
+00:04:08,120 --> 00:04:09,200
+Jesus answered,
+
+69
+00:04:09,900 --> 00:04:11,200
+The most important is,
+
+70
+00:04:11,920 --> 00:04:15,900
+Hear, O Israel, the Lord our God, the Lord is one,
+
+71
+00:04:16,380 --> 00:04:19,580
+and you shall love the Lord your God with all your heart,
+
+72
+00:04:19,580 --> 00:04:22,400
+and with all your soul, and with all your mind,
+
+73
+00:04:22,400 --> 00:04:23,740
+and with all your strength.
+
+74
+00:04:24,360 --> 00:04:25,760
+The second is this,
+
+75
+00:04:26,340 --> 00:04:28,420
+You shall love your neighbor as yourself.
+
+76
+00:04:29,300 --> 00:04:32,260
+There is no other commandment greater than these.
+
+77
+00:04:32,680 --> 00:04:34,340
+And the scribe said to him,
+
+78
+00:04:34,960 --> 00:04:36,420
+You are right, teacher.
+
+79
+00:04:36,880 --> 00:04:41,620
+You have truly said that he is one, and there is no other besides him.
+
+80
+00:04:42,020 --> 00:04:45,760
+And to love him with all the heart, and with all the understanding,
+
+81
+00:04:45,860 --> 00:04:49,540
+and with all the strength, and to love one's neighbor as oneself,
+
+82
+00:04:49,700 --> 00:04:52,380
+is much more than all whole burnt-out,
+
+83
+00:04:52,500 --> 00:04:54,660
+and is much more than all the offerings and sacrifices.
+
+84
+00:04:54,660 --> 00:04:58,040
+And when Jesus saw that he answered wisely, he said to him,
+
+85
+00:04:58,740 --> 00:05:01,300
+You are not far from the kingdom of God.
+
+86
+00:05:01,940 --> 00:05:05,600
+And after that, no one dared to ask him any more questions.
+
+87
+00:05:07,600 --> 00:05:10,160
+And as Jesus taught in the temple, he said,
+
+88
+00:05:10,880 --> 00:05:14,480
+How can the scribe say that the Christ is the son of David?
+
+89
+00:05:15,080 --> 00:05:17,760
+David himself in the Holy Spirit declared,
+
+90
+00:05:17,760 --> 00:05:19,680
+The Lord said to my Lord,
+
+91
+00:05:20,060 --> 00:05:22,280
+Sit at my right hand until I put your enemies,
+
+92
+00:05:22,400 --> 00:05:23,160
+under your feet.
+
+93
+00:05:23,620 --> 00:05:25,680
+David himself calls him Lord.
+
+94
+00:05:26,240 --> 00:05:28,260
+So how is he his son?
+
+95
+00:05:29,080 --> 00:05:31,240
+And the great throng heard him gladly.
+
+96
+00:05:31,820 --> 00:05:33,420
+And in his teaching he said,
+
+97
+00:05:34,200 --> 00:05:38,060
+Beware of the scribes who like to walk around in long robes,
+
+98
+00:05:38,300 --> 00:05:40,180
+and like greetings in the marketplaces,
+
+99
+00:05:40,500 --> 00:05:42,840
+and have the best seats in the synagogues,
+
+100
+00:05:42,960 --> 00:05:45,400
+and the places of honor at feasts,
+
+101
+00:05:45,400 --> 00:05:47,700
+who devour widows' houses,
+
+102
+00:05:47,920 --> 00:05:49,940
+and for a pretense make long prayers.
+
+103
+00:05:51,080 --> 00:05:52,260
+They will receive,
+
+104
+00:05:52,400 --> 00:05:53,960
+the greater condemnation.
+
+105
+00:05:55,660 --> 00:05:58,060
+And he sat down opposite the treasury,
+
+106
+00:05:58,320 --> 00:06:01,020
+and watched the people putting money into the offering box.
+
+107
+00:06:01,860 --> 00:06:03,640
+Many rich people put in large sums,
+
+108
+00:06:04,080 --> 00:06:07,540
+and a poor widow came and put in two small copper coins,
+
+109
+00:06:07,800 --> 00:06:08,580
+which make a penny.
+
+110
+00:06:09,320 --> 00:06:12,060
+And he called his disciples to him and said to them,
+
+111
+00:06:12,420 --> 00:06:14,160
+Truly I say to you,
+
+112
+00:06:14,320 --> 00:06:19,000
+this poor widow has put in more than all those who are contributing to the offering box.
+
+113
+00:06:19,720 --> 00:06:21,800
+For they all contributed out of their abundance,
+
+114
+00:06:22,400 --> 00:06:26,380
+but she out of her poverty has put in everything she had,
+
+115
+00:06:26,740 --> 00:06:28,400
+all she had to live on.
+
+116
+00:06:33,740 --> 00:06:38,740
+The End
+

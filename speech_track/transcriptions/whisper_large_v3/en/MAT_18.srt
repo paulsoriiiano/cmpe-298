@@ -1,0 +1,456 @@
+1
+00:00:00,840 --> 00:00:02,040
+Matthew 18
+
+2
+00:00:02,040 --> 00:00:06,820
+At that time the disciples came to Jesus, saying,
+
+3
+00:00:07,600 --> 00:00:09,780
+Who is the greatest in the kingdom of heaven?
+
+4
+00:00:10,040 --> 00:00:15,660
+And calling to him a child, he put him in the midst of them and said,
+
+5
+00:00:16,480 --> 00:00:22,520
+Truly I say to you, unless you turn and become like children, you will never enter the kingdom of heaven.
+
+6
+00:00:23,140 --> 00:00:27,760
+Whoever humbles himself like this child is the greatest in the kingdom of heaven.
+
+7
+00:00:27,760 --> 00:00:32,340
+Whoever receives one such child in my name receives me.
+
+8
+00:00:33,000 --> 00:00:37,100
+But whoever causes one of these little ones who believe in me to sin,
+
+9
+00:00:37,560 --> 00:00:42,400
+it would be better for him to have a great millstone fastened around his neck
+
+10
+00:00:42,400 --> 00:00:44,760
+and to be drowned in the depth of the sea.
+
+11
+00:00:46,120 --> 00:00:51,620
+Woe to the world for temptations to sin, for it is necessary that temptations come.
+
+12
+00:00:52,120 --> 00:00:55,140
+But woe to the one by whom the temptation comes.
+
+13
+00:00:55,540 --> 00:00:57,640
+And if your hand or your foot...
+
+14
+00:00:57,760 --> 00:01:01,300
+If your foot causes you to sin, cut it off and throw it away.
+
+15
+00:01:01,820 --> 00:01:04,700
+It is better for you to enter life crippled or lame
+
+16
+00:01:04,700 --> 00:01:08,640
+than with two hands or two feet to be thrown into the eternal fire.
+
+17
+00:01:09,400 --> 00:01:13,380
+And if your eye causes you to sin, tear it out and throw it away.
+
+18
+00:01:13,960 --> 00:01:16,720
+It is better for you to enter life with one eye
+
+19
+00:01:16,720 --> 00:01:19,960
+than with two eyes to be thrown into the hell of fire.
+
+20
+00:01:21,060 --> 00:01:24,140
+See that you do not despise one of these little ones.
+
+21
+00:01:24,140 --> 00:01:27,140
+For I tell you that in heaven their angels...
+
+22
+00:01:27,760 --> 00:01:29,940
+I see the face of my Father who is in heaven.
+
+23
+00:01:30,740 --> 00:01:31,720
+What do you think?
+
+24
+00:01:32,080 --> 00:01:35,340
+If a man has a hundred sheep and one of them has gone astray,
+
+25
+00:01:35,780 --> 00:01:38,100
+does he not leave the ninety-nine on the mountains
+
+26
+00:01:38,100 --> 00:01:40,720
+and go in search of the one that went astray?
+
+27
+00:01:41,800 --> 00:01:44,780
+And if he finds it, truly I say to you,
+
+28
+00:01:45,020 --> 00:01:49,120
+he rejoices over it more than over the ninety-nine that never went astray.
+
+29
+00:01:49,900 --> 00:01:53,080
+So it is not the will of my Father who is in heaven
+
+30
+00:01:53,080 --> 00:01:55,920
+that one of these little ones should perish.
+
+31
+00:01:56,880 --> 00:01:57,600
+If your...
+
+32
+00:01:57,600 --> 00:01:58,960
+If your brother sins against you,
+
+33
+00:01:59,420 --> 00:02:02,360
+go and tell him his fault, between you and him alone.
+
+34
+00:02:02,900 --> 00:02:05,580
+If he listens to you, you have gained your brother.
+
+35
+00:02:06,220 --> 00:02:09,740
+But if he does not listen, take one or two others along with you,
+
+36
+00:02:09,940 --> 00:02:13,820
+that every charge may be established by the evidence of two or three witnesses.
+
+37
+00:02:14,520 --> 00:02:18,220
+If he refuses to listen to them, tell it to the church.
+
+38
+00:02:18,840 --> 00:02:21,460
+And if he refuses to listen even to the church,
+
+39
+00:02:21,600 --> 00:02:24,860
+let him be to you as a Gentile and a tax collector.
+
+40
+00:02:26,220 --> 00:02:27,580
+Truly I say to you,
+
+41
+00:02:27,580 --> 00:02:30,300
+whatever you bind on earth shall be bound in heaven,
+
+42
+00:02:30,580 --> 00:02:33,620
+and whatever you loose on earth shall be loosed in heaven.
+
+43
+00:02:34,320 --> 00:02:35,700
+Again I say to you,
+
+44
+00:02:36,000 --> 00:02:38,780
+if two of you agree on earth about anything they ask,
+
+45
+00:02:39,020 --> 00:02:41,320
+it will be done for them by my Father in heaven.
+
+46
+00:02:41,900 --> 00:02:44,300
+For where two or three are gathered in my name,
+
+47
+00:02:44,860 --> 00:02:46,320
+there am I among them.
+
+48
+00:02:47,960 --> 00:02:49,780
+Then Peter came up and said to him,
+
+49
+00:02:50,360 --> 00:02:54,800
+Lord, how often will my brother sin against me and I forgive him?
+
+50
+00:02:55,080 --> 00:02:57,560
+As many as seven times?
+
+51
+00:02:58,400 --> 00:02:59,640
+Jesus said to him,
+
+52
+00:03:00,400 --> 00:03:04,740
+I do not say to you seven times, but seventy times seven.
+
+53
+00:03:05,720 --> 00:03:08,800
+Therefore the kingdom of heaven may be compared to a king
+
+54
+00:03:08,800 --> 00:03:10,860
+who wished to settle accounts with his servants.
+
+55
+00:03:11,640 --> 00:03:13,160
+When he began to settle,
+
+56
+00:03:13,580 --> 00:03:16,580
+one was brought to him who owed him ten thousand talents.
+
+57
+00:03:17,240 --> 00:03:18,580
+And since he could not pay,
+
+58
+00:03:18,900 --> 00:03:22,260
+his master ordered him to be sold with his wife and children
+
+59
+00:03:22,260 --> 00:03:24,500
+and all that he had in payment to be made.
+
+60
+00:03:25,300 --> 00:03:27,100
+So the servant fell on his knees,
+
+61
+00:03:27,100 --> 00:03:28,020
+imploring him,
+
+62
+00:03:28,440 --> 00:03:29,800
+Have patience with me,
+
+63
+00:03:30,040 --> 00:03:31,520
+and I will pay you everything.
+
+64
+00:03:32,560 --> 00:03:33,760
+And out of pity for him,
+
+65
+00:03:34,020 --> 00:03:35,940
+the master of that servant released him
+
+66
+00:03:35,940 --> 00:03:37,380
+and forgave him the debt.
+
+67
+00:03:38,040 --> 00:03:39,960
+But when that same servant went out,
+
+68
+00:03:40,300 --> 00:03:41,880
+he found one of his fellow servants
+
+69
+00:03:41,880 --> 00:03:43,960
+who owed him a hundred denarii,
+
+70
+00:03:44,220 --> 00:03:45,500
+and seizing him,
+
+71
+00:03:45,720 --> 00:03:47,360
+he began to choke him, saying,
+
+72
+00:03:47,700 --> 00:03:48,580
+Pay what you owe.
+
+73
+00:03:48,980 --> 00:03:51,800
+So his fellow servant fell down and pleaded with him,
+
+74
+00:03:52,180 --> 00:03:53,480
+Have patience with me,
+
+75
+00:03:53,660 --> 00:03:54,860
+and I will pay you.
+
+76
+00:03:55,420 --> 00:03:56,460
+He refused,
+
+77
+00:03:56,460 --> 00:03:56,540
+and refused,
+
+78
+00:03:56,540 --> 00:03:56,620
+and refused,
+
+79
+00:03:56,620 --> 00:03:56,640
+and refused,
+
+80
+00:03:56,640 --> 00:03:56,680
+and refused,
+
+81
+00:03:56,680 --> 00:03:56,720
+and refused,
+
+82
+00:03:56,720 --> 00:03:56,800
+and refused,
+
+83
+00:03:56,800 --> 00:03:56,820
+and refused,
+
+84
+00:03:56,820 --> 00:03:56,840
+and refused,
+
+85
+00:03:56,840 --> 00:03:57,080
+and refused,
+
+86
+00:03:57,100 --> 00:03:58,220
+and went and put him in prison
+
+87
+00:03:58,220 --> 00:03:59,760
+until he should pay the debt.
+
+88
+00:04:00,340 --> 00:04:03,180
+When his fellow servants saw what had taken place,
+
+89
+00:04:03,440 --> 00:04:05,240
+they were greatly distressed,
+
+90
+00:04:05,640 --> 00:04:07,820
+and they went and reported to their master
+
+91
+00:04:07,820 --> 00:04:09,340
+all that had taken place.
+
+92
+00:04:10,440 --> 00:04:13,040
+Then his master summoned him and said to him,
+
+93
+00:04:13,560 --> 00:04:14,960
+You wicked servant,
+
+94
+00:04:15,260 --> 00:04:17,060
+I forgave you all that debt
+
+95
+00:04:17,060 --> 00:04:18,580
+because you pleaded with me,
+
+96
+00:04:19,040 --> 00:04:20,760
+and should not you have had mercy
+
+97
+00:04:20,760 --> 00:04:21,940
+on your fellow servant
+
+98
+00:04:21,940 --> 00:04:23,940
+as I had mercy on you?
+
+99
+00:04:24,800 --> 00:04:27,080
+And in anger his master delivered,
+
+100
+00:04:27,080 --> 00:04:27,120
+And in anger his master delivered,
+
+101
+00:04:27,120 --> 00:04:28,260
+and delivered him to the jailers,
+
+102
+00:04:28,260 --> 00:04:30,640
+until he should pay all his debt.
+
+103
+00:04:30,640 --> 00:04:31,240
+until he should pay all his debt.
+
+104
+00:04:31,240 --> 00:04:31,700
+But he did not even fall for your lies,
+
+105
+00:04:31,700 --> 00:04:32,320
+and will ever prevent you
+
+106
+00:04:32,320 --> 00:04:32,460
+And he did not even fall for your lies,
+
+107
+00:04:32,460 --> 00:04:33,420
+although he had enough
+
+108
+00:04:33,420 --> 00:04:34,120
+and also my heavenly father
+
+109
+00:04:34,120 --> 00:04:35,880
+will do to every one of you
+
+110
+00:04:35,880 --> 00:04:38,540
+if you do not forgive your brother
+
+111
+00:04:38,540 --> 00:04:39,660
+from your heart.
+
+112
+00:04:39,840 --> 00:04:50,060
+How will you forgive him?
+
+113
+00:04:52,360 --> 00:04:55,060
+Whether you forgive his brother
+
+114
+00:04:55,060 --> 00:04:57,060
+By loving him
+

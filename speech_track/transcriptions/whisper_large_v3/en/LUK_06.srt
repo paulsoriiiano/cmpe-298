@@ -1,0 +1,428 @@
+1
+00:00:00,000 --> 00:00:02,000
+Luke 6
+
+2
+00:00:30,000 --> 00:00:59,980
+Luke 6
+
+3
+00:01:00,000 --> 00:01:29,980
+Luke 6
+
+4
+00:01:30,000 --> 00:01:59,980
+Luke 6
+
+5
+00:02:00,000 --> 00:02:29,980
+Luke 6
+
+6
+00:02:30,000 --> 00:02:59,980
+Luke 6
+
+7
+00:03:00,000 --> 00:03:29,980
+Luke 6
+
+8
+00:03:30,680 --> 00:03:32,160
+But I say to you
+
+9
+00:03:32,160 --> 00:03:34,240
+who hear, love your enemies.
+
+10
+00:03:34,940 --> 00:03:36,020
+Do good to those who
+
+11
+00:03:36,020 --> 00:03:38,020
+hate you. Bless those
+
+12
+00:03:38,020 --> 00:03:39,980
+who curse you. Pray for those who
+
+13
+00:03:39,980 --> 00:03:42,040
+abuse you. To one who strikes
+
+14
+00:03:42,040 --> 00:03:44,240
+you on the cheek, offer the other also.
+
+15
+00:03:44,700 --> 00:03:46,060
+And from one who takes away
+
+16
+00:03:46,060 --> 00:03:48,100
+your cloak, do not withhold your tunic
+
+17
+00:03:48,100 --> 00:03:50,080
+either. Give
+
+18
+00:03:50,080 --> 00:03:51,860
+to everyone who begs from you.
+
+19
+00:03:52,240 --> 00:03:54,000
+And from one who takes away your goods,
+
+20
+00:03:54,300 --> 00:03:55,600
+do not demand them back.
+
+21
+00:03:56,160 --> 00:03:58,120
+And as you wish that others would do to
+
+22
+00:03:58,120 --> 00:03:59,880
+you, do so to
+
+23
+00:03:59,880 --> 00:04:01,880
+them. If you
+
+24
+00:04:01,880 --> 00:04:03,860
+love those who love you, what
+
+25
+00:04:03,860 --> 00:04:05,880
+benefit is that to you? For even
+
+26
+00:04:05,880 --> 00:04:07,500
+sinners love those who love them.
+
+27
+00:04:07,960 --> 00:04:09,840
+And if you do good to those who do
+
+28
+00:04:09,840 --> 00:04:12,040
+good to you, what benefit is that
+
+29
+00:04:12,040 --> 00:04:13,840
+to you? For even sinners
+
+30
+00:04:13,840 --> 00:04:15,820
+do the same. And
+
+31
+00:04:15,820 --> 00:04:17,960
+if you lend to those from whom you expect
+
+32
+00:04:17,960 --> 00:04:20,000
+to receive, what credit is that
+
+33
+00:04:20,000 --> 00:04:21,800
+to you? Even sinners
+
+34
+00:04:21,800 --> 00:04:23,900
+lend to sinners to get back the same
+
+35
+00:04:23,900 --> 00:04:25,800
+amount. But love
+
+36
+00:04:25,800 --> 00:04:28,000
+your enemies, and do good
+
+37
+00:04:28,000 --> 00:04:29,840
+and lend, expecting nothing
+
+38
+00:04:29,840 --> 00:04:32,060
+in return. And your reward
+
+39
+00:04:32,060 --> 00:04:33,940
+will be great, and you will be
+
+40
+00:04:33,940 --> 00:04:35,480
+sons of the Most High.
+
+41
+00:04:35,860 --> 00:04:37,980
+For He is kind to the ungrateful
+
+42
+00:04:37,980 --> 00:04:39,260
+and the evil.
+
+43
+00:04:40,140 --> 00:04:41,980
+Be merciful, even
+
+44
+00:04:41,980 --> 00:04:43,420
+as your Father is merciful.
+
+45
+00:04:44,220 --> 00:04:46,220
+Judge not, and you will not be judged.
+
+46
+00:04:46,760 --> 00:04:48,000
+Condemn not, and you will
+
+47
+00:04:48,000 --> 00:04:49,880
+not be condemned. Forgive,
+
+48
+00:04:50,480 --> 00:04:51,940
+and you will be forgiven.
+
+49
+00:04:52,620 --> 00:04:54,040
+Give, and it will be given to
+
+50
+00:04:54,040 --> 00:04:56,020
+you. Good measure, pressed
+
+51
+00:04:56,020 --> 00:04:58,240
+down, shaken together, running over
+
+52
+00:04:58,240 --> 00:04:59,620
+will be put into your lap.
+
+53
+00:04:59,840 --> 00:05:01,640
+For with the measure you use,
+
+54
+00:05:01,880 --> 00:05:03,940
+it will be measured back to you.
+
+55
+00:05:04,620 --> 00:05:05,800
+He also told them
+
+56
+00:05:05,800 --> 00:05:07,860
+a parable. Can a blind
+
+57
+00:05:07,860 --> 00:05:09,220
+man lead a blind man?
+
+58
+00:05:10,000 --> 00:05:11,740
+Will they not both fall into a pit?
+
+59
+00:05:12,440 --> 00:05:13,840
+A disciple is not above his
+
+60
+00:05:13,840 --> 00:05:15,860
+teacher, but everyone when he is
+
+61
+00:05:15,860 --> 00:05:17,860
+fully trained will be like his
+
+62
+00:05:17,860 --> 00:05:19,800
+teacher. Why
+
+63
+00:05:19,800 --> 00:05:22,080
+do you see the speck that is in your brother's
+
+64
+00:05:22,080 --> 00:05:24,060
+eye, but do not notice the log
+
+65
+00:05:24,060 --> 00:05:25,140
+that is in your own eye?
+
+66
+00:05:25,620 --> 00:05:27,460
+How can you say to your brother,
+
+67
+00:05:27,460 --> 00:05:29,560
+Brother, let me take out
+
+68
+00:05:29,840 --> 00:05:31,680
+the speck that is in your eye, when you
+
+69
+00:05:31,680 --> 00:05:33,740
+yourself do not see the log that is in
+
+70
+00:05:33,740 --> 00:05:36,220
+your own eye? You hypocrite!
+
+71
+00:05:37,020 --> 00:05:37,540
+First,
+
+72
+00:05:37,860 --> 00:05:39,760
+take the log out of your own eye,
+
+73
+00:05:40,300 --> 00:05:41,840
+and then you will see clearly
+
+74
+00:05:41,840 --> 00:05:43,660
+to take out the speck that is in your
+
+75
+00:05:43,660 --> 00:05:44,340
+brother's eye.
+
+76
+00:05:45,240 --> 00:05:47,620
+For no good tree bears bad fruit,
+
+77
+00:05:47,860 --> 00:05:49,840
+nor again does a bad tree bear good
+
+78
+00:05:49,840 --> 00:05:51,820
+fruit. For each tree is known
+
+79
+00:05:51,820 --> 00:05:52,900
+by its own fruit.
+
+80
+00:05:53,620 --> 00:05:55,920
+For figs are not gathered from thorn bushes,
+
+81
+00:05:56,360 --> 00:05:57,900
+nor are grapes picked from
+
+82
+00:05:57,900 --> 00:05:58,820
+a bramble bush.
+
+83
+00:05:59,840 --> 00:06:01,640
+The good person out of the good treasure
+
+84
+00:06:01,640 --> 00:06:03,360
+of his heart produces good,
+
+85
+00:06:03,780 --> 00:06:05,800
+and the evil person out of his
+
+86
+00:06:05,800 --> 00:06:07,680
+evil treasure produces evil.
+
+87
+00:06:08,320 --> 00:06:09,660
+For out of the abundance
+
+88
+00:06:09,660 --> 00:06:11,740
+of the heart his mouth speaks.
+
+89
+00:06:13,000 --> 00:06:13,520
+Why
+
+90
+00:06:13,520 --> 00:06:15,720
+do you call me, Lord, Lord,
+
+91
+00:06:15,960 --> 00:06:17,580
+and not do what I tell you?
+
+92
+00:06:18,360 --> 00:06:19,780
+Everyone who comes to me and
+
+93
+00:06:19,780 --> 00:06:21,300
+hears my words and does them,
+
+94
+00:06:21,660 --> 00:06:23,480
+I will show you what he is like.
+
+95
+00:06:24,000 --> 00:06:25,800
+He is like a man building
+
+96
+00:06:25,800 --> 00:06:27,600
+a house, who dug deep
+
+97
+00:06:27,600 --> 00:06:29,600
+and laid the foundation on the rock,
+
+98
+00:06:29,840 --> 00:06:31,960
+and when a flood arose, the stream
+
+99
+00:06:31,960 --> 00:06:33,820
+broke against that house and could not
+
+100
+00:06:33,820 --> 00:06:35,840
+shake it, because it had been well
+
+101
+00:06:35,840 --> 00:06:37,840
+built. But the one who
+
+102
+00:06:37,840 --> 00:06:39,540
+hears and does not do them
+
+103
+00:06:39,540 --> 00:06:41,860
+is like a man who built a house on
+
+104
+00:06:41,860 --> 00:06:43,340
+the ground without a foundation.
+
+105
+00:06:43,840 --> 00:06:46,040
+When the stream broke against it, immediately
+
+106
+00:06:46,040 --> 00:06:47,880
+it fell, and the ruin of
+
+107
+00:06:47,880 --> 00:06:49,360
+that house was great.
+

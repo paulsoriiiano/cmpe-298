@@ -1,0 +1,436 @@
+1
+00:00:00,440 --> 00:00:01,800
+Matthew 8
+
+2
+00:00:01,800 --> 00:00:06,480
+When he came down from the mountain, great crowds followed him.
+
+3
+00:00:06,700 --> 00:00:09,860
+And behold, a leper came to him and knelt before him, saying,
+
+4
+00:00:10,720 --> 00:00:14,840
+Lord, if you will, you can make me clean.
+
+5
+00:00:15,440 --> 00:00:18,940
+And Jesus stretched out his hand and touched him, saying,
+
+6
+00:00:19,780 --> 00:00:21,560
+I will be clean.
+
+7
+00:00:22,100 --> 00:00:25,060
+And immediately his leprosy was cleansed.
+
+8
+00:00:25,500 --> 00:00:27,100
+And Jesus said to him,
+
+9
+00:00:27,660 --> 00:00:29,600
+See that you say nothing to anyone.
+
+10
+00:00:30,160 --> 00:00:34,040
+But go, show yourself to the priests and offer the gift that Moses commanded,
+
+11
+00:00:34,580 --> 00:00:35,600
+for a proof to them.
+
+12
+00:00:36,880 --> 00:00:41,340
+When he entered Capernaum, a centurion came forward to him, appealing to him,
+
+13
+00:00:42,120 --> 00:00:46,900
+Lord, my servant is lying paralyzed at home, suffering terribly.
+
+14
+00:00:47,360 --> 00:00:48,780
+And he said to him,
+
+15
+00:00:49,360 --> 00:00:50,960
+I will come and heal him.
+
+16
+00:00:51,620 --> 00:00:53,260
+But the centurion replied,
+
+17
+00:00:54,040 --> 00:00:57,360
+Lord, I am not worthy to have you come under my roof,
+
+18
+00:00:57,700 --> 00:00:59,060
+but only say the word,
+
+19
+00:00:59,380 --> 00:00:59,980
+and my servant,
+
+20
+00:01:00,000 --> 00:01:00,740
+will be healed.
+
+21
+00:01:01,220 --> 00:01:03,620
+For I, too, am a man under authority,
+
+22
+00:01:03,920 --> 00:01:05,140
+with soldiers under me.
+
+23
+00:01:05,500 --> 00:01:06,460
+And I say to one,
+
+24
+00:01:06,560 --> 00:01:07,880
+Go, and he goes.
+
+25
+00:01:08,200 --> 00:01:08,860
+And to another,
+
+26
+00:01:09,000 --> 00:01:10,580
+Come, and he comes.
+
+27
+00:01:10,920 --> 00:01:11,840
+And to my servant,
+
+28
+00:01:11,960 --> 00:01:13,820
+Do this, and he does it.
+
+29
+00:01:14,200 --> 00:01:15,720
+When Jesus heard this,
+
+30
+00:01:15,880 --> 00:01:18,300
+he marveled and said to those who followed him,
+
+31
+00:01:18,940 --> 00:01:20,300
+Truly I tell you,
+
+32
+00:01:20,540 --> 00:01:23,520
+with no one in Israel have I found such faith.
+
+33
+00:01:24,360 --> 00:01:25,180
+I tell you,
+
+34
+00:01:25,560 --> 00:01:27,540
+many will come from east and west
+
+35
+00:01:27,540 --> 00:01:29,460
+and recline at table with Abraham,
+
+36
+00:01:29,680 --> 00:01:29,980
+Isaac,
+
+37
+00:01:30,120 --> 00:01:30,560
+and Jacob,
+
+38
+00:01:30,920 --> 00:01:32,040
+in the kingdom of heaven,
+
+39
+00:01:32,580 --> 00:01:34,000
+while the sons of the kingdom
+
+40
+00:01:34,000 --> 00:01:35,900
+will be thrown into the outer darkness.
+
+41
+00:01:36,620 --> 00:01:38,660
+In that place there will be weeping
+
+42
+00:01:38,660 --> 00:01:40,080
+and gnashing of teeth.
+
+43
+00:01:40,880 --> 00:01:42,960
+And to the centurion Jesus said,
+
+44
+00:01:43,780 --> 00:01:47,160
+Go, let it be done for you as you have believed.
+
+45
+00:01:47,760 --> 00:01:51,220
+And the servant was healed at that very moment.
+
+46
+00:01:51,820 --> 00:01:53,720
+And when Jesus entered Peter's house,
+
+47
+00:01:53,720 --> 00:01:57,020
+he saw his mother-in-law lying sick with a fever.
+
+48
+00:01:57,400 --> 00:01:58,580
+He touched her hand,
+
+49
+00:01:59,060 --> 00:01:59,960
+and the fever left,
+
+50
+00:02:00,540 --> 00:02:03,020
+and she rose and began to serve him.
+
+51
+00:02:03,840 --> 00:02:05,600
+That evening they brought to him
+
+52
+00:02:05,600 --> 00:02:07,420
+many who were oppressed by demons,
+
+53
+00:02:07,700 --> 00:02:09,800
+and he cast out the spirits with a word,
+
+54
+00:02:10,020 --> 00:02:11,480
+and healed all who were sick.
+
+55
+00:02:12,200 --> 00:02:15,420
+This was to fulfill what was spoken by the prophet Isaiah.
+
+56
+00:02:16,220 --> 00:02:19,440
+He took our illnesses and bore our diseases.
+
+57
+00:02:21,260 --> 00:02:23,600
+Now when Jesus saw a crowd around him,
+
+58
+00:02:23,600 --> 00:02:26,020
+he gave orders to go over to the other side.
+
+59
+00:02:26,520 --> 00:02:28,520
+And a scribe came up and said to him,
+
+60
+00:02:29,020 --> 00:02:29,660
+Teacher,
+
+61
+00:02:30,000 --> 00:02:32,740
+I will follow you wherever you go.
+
+62
+00:02:33,420 --> 00:02:34,960
+And Jesus said to him,
+
+63
+00:02:35,760 --> 00:02:36,880
+Foxes have holes,
+
+64
+00:02:37,260 --> 00:02:38,880
+and birds of the air have nests,
+
+65
+00:02:39,420 --> 00:02:42,260
+but the Son of Man has nowhere to lay his head.
+
+66
+00:02:43,040 --> 00:02:44,900
+Another of the disciples said to him,
+
+67
+00:02:45,640 --> 00:02:48,080
+Lord, let me first go and bury my father.
+
+68
+00:02:48,780 --> 00:02:50,020
+And Jesus said to him,
+
+69
+00:02:50,640 --> 00:02:51,820
+Follow me,
+
+70
+00:02:52,060 --> 00:02:54,760
+and leave the dead to bury their own dead.
+
+71
+00:02:56,460 --> 00:02:58,120
+And when he got into the boat,
+
+72
+00:02:58,220 --> 00:02:59,380
+his disciples followed him.
+
+73
+00:03:00,000 --> 00:03:02,460
+Behold, there arose a great storm on the sea,
+
+74
+00:03:02,580 --> 00:03:04,980
+so that the boat was being swamped by the waves.
+
+75
+00:03:05,340 --> 00:03:06,300
+But he was asleep.
+
+76
+00:03:06,820 --> 00:03:08,620
+And they went and woke him, saying,
+
+77
+00:03:09,420 --> 00:03:11,720
+Save us, Lord, we are perishing.
+
+78
+00:03:12,580 --> 00:03:13,840
+And he said to them,
+
+79
+00:03:14,700 --> 00:03:18,040
+Why are you afraid, O you of little faith?
+
+80
+00:03:18,840 --> 00:03:22,500
+Then he rose and rebuked the winds and the sea.
+
+81
+00:03:23,280 --> 00:03:25,280
+And there was a great calm.
+
+82
+00:03:26,120 --> 00:03:28,800
+And the men marveled, saying,
+
+83
+00:03:29,120 --> 00:03:29,840
+What?
+
+84
+00:03:29,840 --> 00:03:31,340
+What sort of man is this,
+
+85
+00:03:31,620 --> 00:03:33,720
+that even winds and sea obey him?
+
+86
+00:03:34,380 --> 00:03:36,020
+And when he came to the other side,
+
+87
+00:03:36,360 --> 00:03:37,760
+to the country of the Gadarenes,
+
+88
+00:03:38,100 --> 00:03:40,160
+two demon-possessed men met him,
+
+89
+00:03:40,280 --> 00:03:41,500
+coming out of the tombs,
+
+90
+00:03:41,700 --> 00:03:44,540
+so fierce that no one could pass that way.
+
+91
+00:03:45,020 --> 00:03:46,460
+And behold, they cried out,
+
+92
+00:03:47,240 --> 00:03:51,340
+What have you to do with us, O Son of God?
+
+93
+00:03:51,700 --> 00:03:55,980
+Have you come here to torment us before the time?
+
+94
+00:03:56,420 --> 00:03:59,100
+Now a herd of many pigs was feeding
+
+95
+00:03:59,100 --> 00:03:59,820
+at some distance,
+
+96
+00:03:59,960 --> 00:04:02,460
+and the demons begged him, saying,
+
+97
+00:04:03,220 --> 00:04:08,880
+If you cast us out, send us away into the herd of pigs.
+
+98
+00:04:09,580 --> 00:04:11,120
+And he said to them,
+
+99
+00:04:11,900 --> 00:04:12,400
+Go.
+
+100
+00:04:13,260 --> 00:04:15,680
+So they came out and went into the pigs,
+
+101
+00:04:15,800 --> 00:04:18,900
+and behold, the whole herd rushed down the steep bank
+
+102
+00:04:18,900 --> 00:04:20,880
+into the sea and drowned in the waters.
+
+103
+00:04:21,580 --> 00:04:23,960
+The herdsmen fled, and going into the city,
+
+104
+00:04:24,040 --> 00:04:25,020
+they told everything,
+
+105
+00:04:25,400 --> 00:04:27,880
+especially what had happened to the demon-possessed men.
+
+106
+00:04:27,880 --> 00:04:29,020
+And behold,
+
+107
+00:04:29,020 --> 00:04:31,300
+all the city came out to meet Jesus,
+
+108
+00:04:31,300 --> 00:04:32,580
+and when they saw him,
+
+109
+00:04:32,920 --> 00:04:34,600
+they begged him to leave their region.
+
