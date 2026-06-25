@@ -1,3 +1,17 @@
+"""
+Validate the ASR evaluation master CSV.
+
+This script performs several integrity checks on the evaluation dataset:
+- Verifies that every expected verse is present for Matthew, Mark, and Luke.
+- Accounts for verses intentionally omitted in each language.
+- Detects invalid verse ID formats.
+- Checks for leftover footnote markers.
+- Ensures text fields are not empty.
+- Verifies that normalized text contains no digits.
+- Confirms that every referenced audio file exists.
+
+"""
+
 import re
 from pathlib import Path
 import pandas as pd

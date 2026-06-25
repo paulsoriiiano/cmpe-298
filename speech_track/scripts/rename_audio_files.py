@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 rename_audio_files.py
 
@@ -15,9 +14,6 @@ and renames them consistently as:
 Run:
   python rename_audio_files.py --src ~/Downloads/ENGESVN1DA --out audio_dataset/en
   python rename_audio_files.py --src ~/Downloads/ILORPVN2DA --out audio_dataset/ilo
-
-Preview without copying:
-  python rename_audio_files.py --src ~/Downloads/ILORPVN2DA --out audio_dataset/ilo --dry-run
 """
 
 import argparse
@@ -80,10 +76,10 @@ def parse_audio_filename(path: Path):
         chapter = int(match.group("chapter"))
         book_name = match.group("book_name").lower()
 
-        # Prefer the written book name because it is clearest.
+        # Prefer the written book name because it is clearest
         book_code = BOOK_NAME_TO_CODE.get(book_name)
 
-        # Fall back to B01/B02/B03/B04 if needed.
+        # Fall back to B01/B02/B03/B04 if needed
         if book_code is None:
             book_code = BOOK_NUM_TO_CODE.get(book_num)
 
@@ -91,7 +87,7 @@ def parse_audio_filename(path: Path):
             return book_code, chapter
 
     # More flexible fallback for Ilokano if underscores display oddly:
-    # Pull book number, chapter, and book name from anywhere in the filename.
+    # Pull book number, chapter, and book name from anywhere in the filename
     match = re.search(r"B(?P<book_num>\d{2})", name, flags=re.IGNORECASE)
     book_num = int(match.group("book_num")) if match else None
 

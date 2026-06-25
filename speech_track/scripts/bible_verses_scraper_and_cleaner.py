@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Bible.is scraper + cleaner for ASR evaluation.
 
@@ -152,7 +151,6 @@ def ilokano_number_to_words(n):
     if n in ILOKANO_NUMBERS:
         return ILOKANO_NUMBERS[n]
 
-    # For larger Ilokano numbers, use digit-by-digit spelling to avoid bad morphology
     return " ".join(ILOKANO_NUMBERS[int(d)] for d in str(n))
 
 
