@@ -81,6 +81,17 @@ speech_track/data/
 └── references/chapter_level/  # Chapter-level reference transcripts
 ```
 
+### Results
+
+Whisper Large-v3 evaluated across 68 chapters per language (Matthew, Mark, Luke):
+
+| Language | Mean WER | Median WER | Mean CER | Median CER | Reference words |
+|---|---|---|---|---|---|
+| English | 8.0% | 5.9% | 7.3% | 5.2% | 60,713 |
+| Ilokano | 81.3% | 79.1% | 33.9% | 25.0% | 54,337 |
+
+Whisper performs well on English but degrades sharply on Ilokano, consistent with its limited low-resource language training data.
+
 ### Scripts
 
 ```
