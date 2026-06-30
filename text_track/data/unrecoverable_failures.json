@@ -1,0 +1,95 @@
+{
+  "summary": {
+    "total": 220,
+    "description": "These entries had a real model response but extracted_answer was null even after the malformed-tag patch (reformat_jsonl.py). A second attempt via retry_missing_answers.py (max_tokens bumped to 4096) recovered 22 more entries, leaving 198 permanently unresolvable.",
+    "counts_before_retry": {
+      "llama_3_8b / pass2_native_ilokano / no_answer_tag": 144,
+      "llama_3_8b / pass2_native_ilokano / degeneration_loop": 7,
+      "llama_3_8b / pass1_english_baseline / no_answer_tag": 28,
+      "llama_3_8b / pass3_english_pivot / no_answer_tag": 32,
+      "claude_sonnet_4_6 / pass2_native_ilokano / no_answer_tag": 7,
+      "claude_sonnet_4_6 / pass2_native_ilokano / degeneration_loop": 2
+    },
+    "retry_results": {
+      "script": "retry_missing_answers.py",
+      "strategy": "max_tokens doubled from 2048 to 4096, same prompt",
+      "recovered": 22,
+      "still_no_answer_tag": 198,
+      "refused_or_errored": 0
+    },
+    "report_note": "198 entries (19.8% of all 1000 rows) produced a response on both attempts but never yielded an extractable answer. 151 of these are Llama pass2_native_ilokano — evidence that Llama 3 8B (3.8B params) cannot sustain chain-of-thought reasoning in Ilokano. Even with doubled output budget (4096 tokens), the model either degenerates into repetition loops or exhausts its context mid-reasoning without concluding. This is distinct from scoring wrong: the model demonstrably failed to engage with the task in the target language."
+  },
+  "failure_type_descriptions": {
+    "no_answer_tag": "The model produced a real reasoning response but never wrote <answer></answer> tags. For Llama bbh_logic/mmlu this is usually a reasoning dead-end; for Llama pass2 gsm8k the model hits max_tokens (2048) mid-reasoning and truncates before finishing. For Claude pass2 bbh_logic the model reasons in Ilokano but gets confused on spatial directional terms (kannigid/kannawan) and stops without concluding.",
+    "degeneration_loop": "The model entered a repetition loop (e.g. 'amin amin amin...' or 'palpalpal...') and consumed all 2048 output tokens without producing any answer. Root cause: 3.8B parameter model collapses on Ilokano input it cannot handle; Claude degenerated on two mmlu_physics pass2 Ilokano prompts."
+  },
+  "entries": {
+    "llama_3_8b / pass2_native_ilokano / no_answer_tag": [
+      "gsm8k_14", "gsm8k_24", "gsm8k_27", "gsm8k_52", "gsm8k_55", "gsm8k_56",
+      "gsm8k_62", "gsm8k_64", "gsm8k_70", "gsm8k_74", "gsm8k_75", "gsm8k_80",
+      "gsm8k_84", "gsm8k_96", "gsm8k_100", "gsm8k_104", "gsm8k_107", "gsm8k_111",
+      "gsm8k_115", "gsm8k_123", "gsm8k_126", "gsm8k_134", "gsm8k_143", "gsm8k_149",
+      "gsm8k_165", "gsm8k_209", "gsm8k_216", "gsm8k_231", "gsm8k_233", "gsm8k_236",
+      "gsm8k_238", "gsm8k_249", "gsm8k_266", "gsm8k_269", "gsm8k_272", "gsm8k_275",
+      "gsm8k_277", "gsm8k_279", "gsm8k_284", "gsm8k_288", "gsm8k_294", "gsm8k_311",
+      "gsm8k_313", "gsm8k_329", "gsm8k_331", "gsm8k_365", "gsm8k_379", "gsm8k_382",
+      "gsm8k_392",
+      "bbh_logic_2", "bbh_logic_5", "bbh_logic_22", "bbh_logic_23", "bbh_logic_43",
+      "bbh_logic_58", "bbh_logic_90", "bbh_logic_123", "bbh_logic_125", "bbh_logic_128",
+      "bbh_logic_157", "bbh_logic_158", "bbh_logic_243",
+      "bbh_causal_251", "bbh_causal_252", "bbh_causal_257", "bbh_causal_265",
+      "bbh_causal_268", "bbh_causal_281",
+      "mmlu_logic_0", "mmlu_logic_1", "mmlu_logic_4", "mmlu_logic_16", "mmlu_logic_31",
+      "mmlu_logic_32", "mmlu_logic_36", "mmlu_logic_37", "mmlu_logic_41", "mmlu_logic_44",
+      "mmlu_logic_54", "mmlu_logic_56", "mmlu_logic_67", "mmlu_logic_71", "mmlu_logic_73",
+      "mmlu_logic_75", "mmlu_logic_76", "mmlu_logic_78", "mmlu_logic_80", "mmlu_logic_81",
+      "mmlu_logic_85", "mmlu_logic_86", "mmlu_logic_87", "mmlu_logic_89", "mmlu_logic_90",
+      "mmlu_logic_96", "mmlu_logic_97", "mmlu_logic_104", "mmlu_logic_106", "mmlu_logic_109",
+      "mmlu_logic_117", "mmlu_logic_119",
+      "mmlu_physics_127", "mmlu_physics_130", "mmlu_physics_135", "mmlu_physics_136",
+      "mmlu_physics_144", "mmlu_physics_146", "mmlu_physics_147", "mmlu_physics_148",
+      "mmlu_physics_150", "mmlu_physics_151", "mmlu_physics_152", "mmlu_physics_157",
+      "mmlu_physics_163", "mmlu_physics_166", "mmlu_physics_177", "mmlu_physics_178",
+      "mmlu_physics_190", "mmlu_physics_193", "mmlu_physics_200", "mmlu_physics_201",
+      "mmlu_physics_203", "mmlu_physics_211", "mmlu_physics_216", "mmlu_physics_217",
+      "mmlu_physics_223", "mmlu_physics_227", "mmlu_physics_232", "mmlu_physics_235",
+      "mmlu_physics_236", "mmlu_physics_247", "mmlu_physics_248", "mmlu_physics_249",
+      "mmlu_physics_253", "mmlu_physics_256", "mmlu_physics_258", "mmlu_physics_263",
+      "mmlu_physics_266", "mmlu_physics_278", "mmlu_physics_279", "mmlu_physics_281",
+      "mmlu_physics_287", "mmlu_physics_288", "mmlu_physics_293", "mmlu_physics_299"
+    ],
+    "llama_3_8b / pass2_native_ilokano / degeneration_loop": [
+      "gsm8k_98", "gsm8k_187",
+      "mmlu_logic_99", "mmlu_logic_108", "mmlu_logic_110",
+      "mmlu_physics_250", "mmlu_physics_282"
+    ],
+    "llama_3_8b / pass1_english_baseline / no_answer_tag": [
+      "gsm8k_132", "gsm8k_330",
+      "bbh_logic_5", "bbh_logic_17", "bbh_logic_107", "bbh_logic_158", "bbh_logic_221",
+      "mmlu_logic_3", "mmlu_logic_27", "mmlu_logic_33", "mmlu_logic_40", "mmlu_logic_52",
+      "mmlu_logic_59", "mmlu_logic_69", "mmlu_logic_74", "mmlu_logic_82", "mmlu_logic_88",
+      "mmlu_logic_93", "mmlu_logic_102", "mmlu_logic_105", "mmlu_logic_114",
+      "mmlu_physics_153", "mmlu_physics_156", "mmlu_physics_206", "mmlu_physics_232",
+      "mmlu_physics_253", "mmlu_physics_260", "mmlu_physics_293"
+    ],
+    "llama_3_8b / pass3_english_pivot / no_answer_tag": [
+      "gsm8k_108", "gsm8k_147", "gsm8k_274",
+      "bbh_logic_62", "bbh_logic_124", "bbh_logic_147", "bbh_logic_157",
+      "bbh_logic_162", "bbh_logic_247",
+      "bbh_causal_252", "bbh_causal_255", "bbh_causal_257", "bbh_causal_264",
+      "bbh_causal_269", "bbh_causal_271", "bbh_causal_275", "bbh_causal_277",
+      "bbh_causal_286", "bbh_causal_288",
+      "mmlu_logic_5", "mmlu_logic_6", "mmlu_logic_30", "mmlu_logic_32",
+      "mmlu_logic_40", "mmlu_logic_52", "mmlu_logic_65",
+      "mmlu_physics_137", "mmlu_physics_173", "mmlu_physics_251",
+      "mmlu_physics_262", "mmlu_physics_264", "mmlu_physics_269"
+    ],
+    "claude_sonnet_4_6 / pass2_native_ilokano / no_answer_tag": [
+      "bbh_logic_5", "bbh_logic_47", "bbh_logic_110", "bbh_logic_148",
+      "bbh_logic_160", "bbh_logic_227", "bbh_logic_239"
+    ],
+    "claude_sonnet_4_6 / pass2_native_ilokano / degeneration_loop": [
+      "mmlu_physics_184", "mmlu_physics_221"
+    ]
+  }
+}
