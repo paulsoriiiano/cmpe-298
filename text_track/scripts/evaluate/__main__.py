@@ -19,6 +19,14 @@ def main():
     parser = argparse.ArgumentParser(description="Staged cross-lingual LLM evaluation.")
     parser.add_argument("--limit", type=int, help="Limit the number of dataset rows evaluated.")
     parser.add_argument(
+        "--run-id", default=None,
+        help="Stable, predetermined run ID (e.g. one assigned per SLURM job). Restarting a "
+             "failed job under the SAME --run-id appends to the same result JSONL instead "
+             "of starting a new one; write_run_manifest() refuses to proceed if the new "
+             "invocation's settings don't match what's already recorded for that run_id. "
+             "Default: a fresh random UUID.",
+    )
+    parser.add_argument(
         "--item-ids", nargs="+", default=None,
         help="Restrict to exactly these dataset item IDs (e.g. a hand-picked source-diverse "
              "pilot slice), overriding both the full-dataset default and the A_E0/A_I0 "
@@ -38,7 +46,7 @@ def main():
 
     run_id = run_evaluation(
         condition_keys=args.conditions, model_keys=args.models, limit=args.limit,
-        item_ids=args.item_ids,
+        item_ids=args.item_ids, run_id=args.run_id,
     )
     print(f"Run complete. run_id={run_id}")
     print(f"Results: text_track/data/eval_runs/{run_id}.jsonl")

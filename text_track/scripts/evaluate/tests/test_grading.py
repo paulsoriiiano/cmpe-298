@@ -4,7 +4,7 @@ No network calls: uses canned ModelResponse objects only (see fakes.CANNED).
 """
 import unittest
 
-from ..grading import FailureType, classify_result
+from ..grading import FailureType, classify_result, has_text_beyond_answer, strip_answer_content
 from .fakes import CANNED, canned_response
 
 
@@ -251,6 +251,38 @@ class FallbackExtractionTests(unittest.TestCase):
         self.assertEqual(extracted, "109")
         self.assertTrue(is_correct)
         self.assertTrue(format_compliant)
+
+
+class RationalePresenceHeuristicTests(unittest.TestCase):
+    """A naive bool(generated_rationale) check treats <answer>109</answer> as containing a
+    rationale, which is exactly the answer-only behavior a rationale-presence check needs to
+    catch. has_text_beyond_answer() strips the tag/fallback forms first."""
+
+    def test_answer_tag_only_is_false(self):
+        self.assertFalse(has_text_beyond_answer("<answer>109</answer>"))
+
+    def test_boxed_only_is_false(self):
+        self.assertFalse(has_text_beyond_answer("$$\\boxed{109}$$"))
+
+    def test_one_sentence_explanation_plus_answer_is_true(self):
+        text = "Allen will be 109 in ten years.\n<answer>109</answer>"
+        self.assertTrue(has_text_beyond_answer(text))
+
+    def test_multi_step_explanation_plus_answer_is_true(self):
+        text = (
+            "Let x be the common ratio unit. 7x + 11x = 162, so x = 9. "
+            "Allen's current age is 11*9 = 99. In 10 years: 99 + 10 = 109.\n"
+            "<answer>109</answer>"
+        )
+        self.assertTrue(has_text_beyond_answer(text))
+
+    def test_empty_response_is_false(self):
+        self.assertFalse(has_text_beyond_answer(""))
+        self.assertFalse(has_text_beyond_answer(None))
+
+    def test_strip_answer_content_removes_tag_and_boxed(self):
+        text = "Reasoning here.\n$$\\boxed{109}$$\n<answer>109</answer>"
+        self.assertEqual(strip_answer_content(text), "Reasoning here.")
 
 
 if __name__ == "__main__":

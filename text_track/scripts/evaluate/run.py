@@ -10,11 +10,8 @@ import uuid
 from . import conditions as cond_mod
 from . import grading
 from . import tokenization
-from .conditions import (
-    CONDITIONS, IMPLEMENTED_CONDITIONS, STRATIFIED_SUBSET_CONDITIONS, get_condition,
-    require_implemented,
-)
-from .models import MODEL_REGISTRY, complete_with_retry, manifest_settings_for
+from .conditions import STRATIFIED_SUBSET_CONDITIONS, get_condition, require_implemented
+from .models import MODEL_REGISTRY, complete_with_retry, config_fingerprint, manifest_settings_for
 from .storage import RUNS_DIR, ResultRecord, ResumeIndex, RunWriter, make_resume_key, write_run_manifest
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -51,15 +48,32 @@ def _now_iso() -> str:
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
+def _token_fields(*, model_key, item, translation, rationale):
+    """Field names returned by count_stage_tokens() already match ResultRecord's token
+    field names exactly, so callers just spread this dict straight into the constructor."""
+    return tokenization.count_stage_tokens(
+        model_key=model_key, question_en=item["question_en"], question_ilo=item["question_ilo"],
+        translation=translation, rationale=rationale,
+    )
+
+
+def _planned_stages_for(condition) -> list[str]:
+    if condition.new_context_for_reasoning:
+        return ["translate", "reason"]
+    if condition.reasoning_lang is None:
+        return ["direct"]
+    return ["reason"]
+
+
 def _run_single_call_condition(
-    *, item, model_key, condition, dataset_version, protocol_version, run_id, resume_index,
-    writer,
+    *, item, model_key, condition, dataset_version, protocol_version, config_fp, run_id,
+    resume_index, writer,
 ):
     """A_EE / A_II: one call, question -> rationale -> canonical answer."""
     key = make_resume_key(
         dataset_version=dataset_version, protocol_version=protocol_version,
-        prompt_version=condition.prompt_version, item_id=item["id"], model_key=model_key,
-        condition_key=condition.key, stage="reason",
+        prompt_version=condition.prompt_version, config_fingerprint=config_fp,
+        item_id=item["id"], model_key=model_key, condition_key=condition.key, stage="reason",
     )
     if resume_index.is_complete(key):
         return resume_index.get(key)
@@ -74,9 +88,15 @@ def _run_single_call_condition(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="reason",
     )
+    token_fields = _token_fields(
+        model_key=model_key, item=item, translation=None,
+        rationale=response.text if response else None,
+    )
+    descriptive = tokenization.descriptive_counts(response.text if response else None)
     record = ResultRecord(
         run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
         item_id=item["id"], source=item["source"], model_key=model_key,
+        config_fingerprint=config_fp,
         condition_key=condition.key, stage="reason", prompt_version=condition.prompt_version,
         original_input=user_input, generated_translation=None,
         generated_rationale=response.text if response else None,
@@ -86,7 +106,7 @@ def _run_single_call_condition(
         failure_type=failure_type.value,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
-        **tokenization.count_prompt_tokens(system, user_input),
+        **token_fields, **descriptive,
         finish_reason=response.finish_reason if response else None,
         latency_ms=latency_ms, retry_count=retry_count,
         error_message=str(exception) if exception else None, timestamp=_now_iso(),
@@ -97,15 +117,15 @@ def _run_single_call_condition(
 
 
 def _run_direct_condition(
-    *, item, model_key, condition, dataset_version, protocol_version, run_id, resume_index,
-    writer,
+    *, item, model_key, condition, dataset_version, protocol_version, config_fp, run_id,
+    resume_index, writer,
 ):
     """A_E0 / A_I0: one call, question -> canonical answer directly, no rationale. Runs only
     over the fixed 300-item stratified subset (see STRATIFIED_SUBSET_CONDITIONS)."""
     key = make_resume_key(
         dataset_version=dataset_version, protocol_version=protocol_version,
-        prompt_version=condition.prompt_version, item_id=item["id"], model_key=model_key,
-        condition_key=condition.key, stage="direct",
+        prompt_version=condition.prompt_version, config_fingerprint=config_fp,
+        item_id=item["id"], model_key=model_key, condition_key=condition.key, stage="direct",
     )
     if resume_index.is_complete(key):
         return resume_index.get(key)
@@ -120,9 +140,17 @@ def _run_direct_condition(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="direct",
     )
+    # Direct-answer controls have no rationale by design; still tokenize the raw response
+    # under "rationale" so an unexpected explanation the model added anyway isn't invisible.
+    token_fields = _token_fields(
+        model_key=model_key, item=item, translation=None,
+        rationale=response.text if response else None,
+    )
+    descriptive = tokenization.descriptive_counts(response.text if response else None)
     record = ResultRecord(
         run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
         item_id=item["id"], source=item["source"], model_key=model_key,
+        config_fingerprint=config_fp,
         condition_key=condition.key, stage="direct", prompt_version=condition.prompt_version,
         original_input=user_input, generated_translation=None, generated_rationale=None,
         raw_response=response.text if response else None,
@@ -131,7 +159,7 @@ def _run_direct_condition(
         failure_type=failure_type.value,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
-        **tokenization.count_prompt_tokens(system, user_input),
+        **token_fields, **descriptive,
         finish_reason=response.finish_reason if response else None,
         latency_ms=latency_ms, retry_count=retry_count,
         error_message=str(exception) if exception else None, timestamp=_now_iso(),
@@ -142,21 +170,21 @@ def _run_direct_condition(
 
 
 def _run_staged_pivot_condition(
-    *, item, model_key, condition, dataset_version, protocol_version, run_id, resume_index,
-    writer,
+    *, item, model_key, condition, dataset_version, protocol_version, config_fp, run_id,
+    resume_index, writer,
 ):
     """A_IE / A_EI: translate (separate call, saved) -> fresh context -> reason using only
     the saved translation. Original question and canonical answer are never included in the
     reasoning-stage prompt."""
     translate_key = make_resume_key(
         dataset_version=dataset_version, protocol_version=protocol_version,
-        prompt_version=condition.prompt_version, item_id=item["id"], model_key=model_key,
-        condition_key=condition.key, stage="translate",
+        prompt_version=condition.prompt_version, config_fingerprint=config_fp,
+        item_id=item["id"], model_key=model_key, condition_key=condition.key, stage="translate",
     )
     reason_key = make_resume_key(
         dataset_version=dataset_version, protocol_version=protocol_version,
-        prompt_version=condition.prompt_version, item_id=item["id"], model_key=model_key,
-        condition_key=condition.key, stage="reason",
+        prompt_version=condition.prompt_version, config_fingerprint=config_fp,
+        item_id=item["id"], model_key=model_key, condition_key=condition.key, stage="reason",
     )
 
     translate_record = resume_index.get(translate_key)
@@ -174,9 +202,15 @@ def _run_staged_pivot_condition(
             response=response, exception=exception, canonical_answer=None,
             source=item["source"], stage="translate",
         )
+        token_fields = _token_fields(
+            model_key=model_key, item=item, translation=response.text if response else None,
+            rationale=None,
+        )
+        descriptive = tokenization.descriptive_counts(response.text if response else None)
         translate_record = ResultRecord(
             run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
             item_id=item["id"], source=item["source"], model_key=model_key,
+            config_fingerprint=config_fp,
             condition_key=condition.key, stage="translate", prompt_version=condition.prompt_version,
             original_input=user_input, generated_translation=response.text if response else None,
             generated_rationale=None, raw_response=response.text if response else None,
@@ -185,7 +219,7 @@ def _run_staged_pivot_condition(
             failure_type=failure_type.value,
             input_tokens=response.input_tokens if response else None,
             output_tokens=response.output_tokens if response else None,
-            **tokenization.count_prompt_tokens(translation_system, user_input),
+                **token_fields, **descriptive,
             finish_reason=response.finish_reason if response else None,
             latency_ms=latency_ms, retry_count=retry_count,
             error_message=str(exception) if exception else None, timestamp=_now_iso(),
@@ -216,9 +250,15 @@ def _run_staged_pivot_condition(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="reason",
     )
+    token_fields = _token_fields(
+        model_key=model_key, item=item, translation=None,
+        rationale=response.text if response else None,
+    )
+    descriptive = tokenization.descriptive_counts(response.text if response else None)
     reason_record = ResultRecord(
         run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
         item_id=item["id"], source=item["source"], model_key=model_key,
+        config_fingerprint=config_fp,
         condition_key=condition.key, stage="reason", prompt_version=condition.prompt_version,
         original_input=translated_text, generated_translation=None,
         generated_rationale=response.text if response else None,
@@ -228,7 +268,7 @@ def _run_staged_pivot_condition(
         failure_type=failure_type.value,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
-        **tokenization.count_prompt_tokens(reasoning_system, translated_text),
+        **token_fields, **descriptive,
         finish_reason=response.finish_reason if response else None,
         latency_ms=latency_ms, retry_count=retry_count,
         error_message=str(exception) if exception else None, timestamp=_now_iso(),
@@ -247,7 +287,13 @@ def run_evaluation(
     """item_ids, if given, restricts every condition to exactly those item IDs (e.g. a
     hand-picked source-diverse pilot slice — one item per source — per PROTOCOL.md section
     9's pilot requirement) instead of running the full dataset / stratified subset. Applied
-    before `limit`, which still works as an additional cap if both are given."""
+    before `limit`, which still works as an additional cap if both are given.
+
+    run_id, if given, must be a stable, predetermined ID (e.g. one assigned per SLURM job) —
+    restarting a failed job under the SAME run_id appends to the same result JSONL rather
+    than starting a new file, and write_run_manifest() will refuse to proceed if the new
+    call's settings don't match what's already recorded for that run_id.
+    """
     for key in condition_keys:
         require_implemented(key)
     for key in model_keys:
@@ -263,6 +309,13 @@ def run_evaluation(
             raise ValueError(f"item_ids not found in dataset: {sorted(missing)}")
     dataset_version = load_dataset_version(manifest_path)
     protocol_version = cond_mod.PROTOCOL_VERSION
+
+    # One fingerprint per model, computed once (native-tokenizer loading is cached), reused
+    # for every record and resume-key lookup for that model in this run.
+    config_fingerprints = {
+        key: config_fingerprint(key, tokenizer_revision=tokenization.tokenizer_identity(key)[1])
+        for key in model_keys
+    }
 
     # Per-condition item pools: A_E0/A_I0 normally run only over the fixed 300-item
     # stratified subset (per PROTOCOL.md section 1); every other condition runs over the
@@ -283,16 +336,43 @@ def run_evaluation(
         item_pools[condition_key] = pool[:limit] if limit else pool
 
     run_id = run_id or str(uuid.uuid4())
+
+    # Resume index must be built BEFORE the manifest is written, both so total_planned_units
+    # reflects work not yet done... actually total_planned_units intentionally counts ALL
+    # planned units (done or not) as a record of intent — but resuming_from_run_ids needs the
+    # index to know which prior runs' completed work this run will reuse.
+    resume_index = ResumeIndex.load_from_runs_dir(runs_dir)
+
+    resuming_from_run_ids = set()
+    for condition_key in condition_keys:
+        condition = get_condition(condition_key)
+        for item in item_pools[condition_key]:
+            for model_key in model_keys:
+                for stage in _planned_stages_for(condition):
+                    key = make_resume_key(
+                        dataset_version=dataset_version, protocol_version=protocol_version,
+                        prompt_version=condition.prompt_version,
+                        config_fingerprint=config_fingerprints[model_key],
+                        item_id=item["id"], model_key=model_key, condition_key=condition.key,
+                        stage=stage,
+                    )
+                    record = resume_index.get(key)
+                    if record is not None and resume_index.is_complete(key) and record.run_id != run_id:
+                        resuming_from_run_ids.add(record.run_id)
+
     total_planned_units = sum(len(item_pools[k]) for k in condition_keys) * len(model_keys)
     write_run_manifest(
         run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
         conditions=condition_keys, models=model_keys, total_planned_units=total_planned_units,
         planned_item_ids_by_condition={k: [item["id"] for item in item_pools[k]] for k in condition_keys},
-        model_settings={key: manifest_settings_for(key) for key in model_keys},
+        model_settings={
+            key: {**manifest_settings_for(key), "config_fingerprint": config_fingerprints[key]}
+            for key in model_keys
+        },
+        resuming_from_run_ids=sorted(resuming_from_run_ids),
         runs_dir=runs_dir,
     )
 
-    resume_index = ResumeIndex.load_from_runs_dir(runs_dir)
     writer = RunWriter(run_id, runs_dir=runs_dir)
     try:
         for condition_key in condition_keys:
@@ -308,6 +388,7 @@ def run_evaluation(
                     handler(
                         item=item, model_key=model_key, condition=condition,
                         dataset_version=dataset_version, protocol_version=protocol_version,
+                        config_fp=config_fingerprints[model_key],
                         run_id=run_id, resume_index=resume_index, writer=writer,
                     )
     finally:

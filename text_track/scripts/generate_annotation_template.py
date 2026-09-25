@@ -13,12 +13,16 @@ Usage:
 import argparse
 import json
 import os
+import sys
 
 import pandas as pd
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "data", "eval_runs")
 ANNOTATIONS_DIR = os.path.join(SCRIPT_DIR, "..", "data", "annotations")
+
+sys.path.insert(0, SCRIPT_DIR)
+from evaluate.grading import has_text_beyond_answer  # noqa: E402
 
 KEY_COLUMNS = ["run_id", "item_id", "model_key", "condition_key", "stage"]
 
@@ -27,21 +31,33 @@ CONTEXT_COLUMNS = [
     "extracted_answer", "canonical_answer", "is_correct", "format_compliant", "failure_type",
 ]
 
-# Filled in programmatically — mechanically derivable from the run data, not a judgment call.
-DERIVED_ANNOTATION_COLUMNS = ["rationale_present", "requested_language"]
+# Filled in programmatically — mechanically derivable from the run data, not a judgment
+# call. NOTE: has_text_beyond_answer is a heuristic diagnostic to help an annotator spot
+# likely answer-only responses quickly; it is NOT the same as rationale_present, which
+# requires human judgment (a response can have "text beyond the answer" that's still not a
+# real explanation — e.g. filler or a restated question).
+DERIVED_ANNOTATION_COLUMNS = ["has_text_beyond_answer", "requested_language"]
 
-# Left blank — require a human annotator's judgment.
+# Left blank — require a human annotator's judgment. rationale_present is intentionally
+# here, not derived: a naive bool(generated_rationale) check treats "<answer>109</answer>"
+# as containing a rationale, since the tag text itself is nonempty — exactly the
+# answer-only behavior this field exists to catch. See has_text_beyond_answer above for a
+# machine-computed hint, but the actual determination is a human call.
 BLANK_ANNOTATION_COLUMNS = [
-    "language_compliance",      # compliant | mixed | noncompliant | uncertain
-    "translation_faithfulness",  # accurate | minor_error | major_error | unusable
+    "rationale_present",          # true | false (human-verified, not inferred)
+    "language_compliance",        # compliant | mixed | noncompliant | uncertain
+    "translation_faithfulness",   # accurate | minor_error | major_error | unusable
     "translation_error_type",     # none | lexical | morphological | semantic | omission | addition
     "annotation_notes",
     "annotator",
 ]
 
 # requested_language per (condition_key, stage) — mirrors conditions.py's reasoning_lang /
-# translation_target_lang, without importing the evaluate package (this script only reads
-# already-written result JSONL, it doesn't need the condition definitions at runtime).
+# translation_target_lang, without importing the evaluate package's condition definitions
+# (this script only reads already-written result JSONL). A_E0/A_I0 are direct-answer
+# controls with a language-neutral canonical answer (a bare number/letter/YES-NO token) —
+# there is no rationale to judge for language compliance, so they're deliberately excluded
+# (None) rather than assigned "en"/"ilo" as if a rationale-language judgment applied.
 _REQUESTED_LANGUAGE = {
     ("A_EE", "reason"): "en",
     ("A_II", "reason"): "ilo",
@@ -49,8 +65,8 @@ _REQUESTED_LANGUAGE = {
     ("A_IE", "reason"): "en",
     ("A_EI", "translate"): "ilo",
     ("A_EI", "reason"): "ilo",
-    ("A_E0", "direct"): "en",
-    ("A_I0", "direct"): "ilo",
+    ("A_E0", "direct"): None,
+    ("A_I0", "direct"): None,
 }
 
 
@@ -70,7 +86,9 @@ def build_annotation_rows(records: list[dict]) -> list[dict]:
     rows = []
     for r in records:
         row = {col: r.get(col) for col in KEY_COLUMNS + CONTEXT_COLUMNS}
-        row["rationale_present"] = bool((r.get("generated_rationale") or "").strip())
+        # raw_response (not generated_rationale) is checked since translate-stage rows
+        # store their text in generated_translation/raw_response, not generated_rationale.
+        row["has_text_beyond_answer"] = has_text_beyond_answer(r.get("raw_response"))
         row["requested_language"] = _REQUESTED_LANGUAGE.get((r["condition_key"], r["stage"]))
         for col in BLANK_ANNOTATION_COLUMNS:
             row[col] = ""

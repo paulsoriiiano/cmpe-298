@@ -1,7 +1,8 @@
 # Experimental Protocol
 
 - Protocol version: `protocol_v2`
-- Date: 2026-09-23 (implementation status updated 2026-09-24; v2 revision 2026-09-25)
+- Date: 2026-09-23 (implementation status updated 2026-09-24; v2 revision 2026-09-25;
+  resumption/tokenization/annotation hardening 2026-09-25)
 - Pinned dataset version: `dataset_conference_v1.1` (see `data/dataset_manifest.json`)
 - **STATUS: implemented in `text_track/scripts/evaluate/`, not yet piloted. No real
   model API calls have been made under `protocol_v2` (only fake-client tests so far).**
@@ -218,38 +219,71 @@ unreproducible-from-current-scripts for the record.
 ## 8. Resumption and reproducibility metadata
 
 **Resume key**: `ResultRecord`'s resume key (`storage.make_resume_key()`) is
-`(dataset_version, protocol_version, prompt_version, item_id, model_key,
-condition_key, stage)`. Including `prompt_version` means a prompt-wording
-change under the same `protocol_version` can't accidentally reuse a stale
-result — though in practice we bump `PROTOCOL_VERSION` alongside any prompt
-change anyway (as with this `v2` revision), which invalidates old results by
-itself.
+`(dataset_version, protocol_version, prompt_version, config_fingerprint,
+item_id, model_key, condition_key, stage)`. `config_fingerprint`
+(`models.config_fingerprint()`) is a short hash of everything that
+determines a model's actual behavior — checkpoint, precision, sampling
+settings, serving config, tokenizer revision — so a changed model
+configuration (a different vLLM precision, an updated checkpoint) can never
+be silently treated as equivalent to an older run's results, the same way
+`prompt_version`/`protocol_version` protect against a prompt-wording change
+being silently reused.
+
+**Older result files can't crash a run**: `ResumeIndex.load_from_runs_dir()`
+tolerates JSONL rows from an older schema (e.g. a `protocol_v1` file missing
+fields this revision added) by filling missing fields with `None` rather
+than raising — such rows simply never match a current lookup key (different
+`protocol_version`/`config_fingerprint`), so old data is cleanly ignored,
+not fatal. A corrupt/truncated line is skipped the same way.
+
+**Stable run IDs**: `run_evaluation(..., run_id=...)` / the CLI's `--run-id`
+accept a predetermined ID (e.g. one assigned per SLURM job). Restarting a
+failed job under the *same* `--run-id` appends to the same result JSONL
+rather than starting a new file. `write_run_manifest()` refuses to overwrite
+an existing manifest for that `run_id` if the new invocation's
+`dataset_version`/`protocol_version`/`conditions`/`models`/`model_settings`
+don't match exactly — raising `ValueError` rather than silently applying
+different settings to a run_id that already has results under the old ones.
+When a run reuses another run's completed work (any `run_id` found in
+`ResumeIndex`, not just its own), those source `run_id`s are recorded in the
+manifest's `resuming_from_run_ids`.
 
 **Run manifest** (`storage.write_run_manifest()`, written before any API
-calls): now also records `git_commit` (the evaluator's own commit hash at
-run time) and `model_settings` — one dict per model in the run
-(`models.manifest_settings_for()`), including model ID, provider,
-temperature, max output tokens, seed, and (where applicable) revision,
-context length, precision, vLLM version, and FlashInfer sampler setting.
-Hosted APIs (Anthropic/OpenAI/HF router) don't expose most of the
-serving-level fields to clients, so those stay `null` for those providers
-rather than guessed. For HPC/vLLM models, values not known when the
-registry entry was written can be supplied via env vars at manifest-build
-time (`HPC_MODEL_REVISION`, `HPC_CONTEXT_LENGTH`, `HPC_PRECISION`,
+calls): also records `git_commit` (the evaluator's own commit hash at run
+time) and `model_settings` — one dict per model in the run
+(`models.manifest_settings_for()`, plus `config_fingerprint`), including
+model ID, provider, temperature, max output tokens, seed, and (where
+applicable) `hf_repo`, `checkpoint_commit_sha`, `tokenizer_repo`,
+`revision`, `context_length`, `precision`, `thinking_mode`, `vllm_version`,
+and `flashinfer_sampler`. Hosted APIs (Anthropic/OpenAI/HF router) don't
+expose most of the serving-level fields to clients, so those stay `null`
+for those providers rather than guessed. For HPC/vLLM models, values not
+known when the registry entry was written can be supplied via env vars at
+manifest-build time (`HPC_HF_REPO`, `HPC_CHECKPOINT_COMMIT_SHA`,
+`HPC_MODEL_REVISION`, `HPC_TOKENIZER_REPO`, `HPC_TOKENIZER_REVISION`,
+`HPC_CONTEXT_LENGTH`, `HPC_THINKING_MODE`, `HPC_PRECISION`,
 `HPC_VLLM_VERSION`, `HPC_FLASHINFER_SAMPLER`) instead of hardcoding them
-into `models.py` ahead of the HPC serving setup being finalized.
+into `models.py` ahead of the HPC serving setup being finalized —
+numeric/boolean values (`HPC_CONTEXT_LENGTH`, `HPC_FLASHINFER_SAMPLER`) are
+parsed into their proper types, not left as raw strings.
 
-**Token counts**: each `ResultRecord` now also records
-`system_prompt_tokens`, `user_input_tokens`, and `rendered_prompt_tokens`
-(local approximate counts from `tokenization.py`, using `tiktoken`'s
-`cl100k_base` encoding as one consistent approximation across all
-providers), plus `tokenizer_id`/`tokenizer_revision` so the approximation is
-traceable. This is **not** the exact tokenizer for Claude, Llama, Qwen, or
-GPT-5.2 — it exists to let translate-stage vs. reason-stage costs, and
-system-prompt vs. per-item costs, be compared consistently across
-conditions/models, not to give exact per-provider token accounting.
+**Token counts** (`tokenization.py`): each `ResultRecord` records
+`question_en_tokens`/`question_ilo_tokens` (always, since both are
+available on every dataset item regardless of condition), plus
+`translation_tokens`/`rationale_tokens` when this record actually produced
+one, and `tokenization_tax_ratio` (`question_ilo_tokens /
+question_en_tokens`). For HPC-served models, these are **model-native**
+counts (loaded via the `tokenizers` library from the model's own
+`tokenizer.json` on the HF Hub) — the primary figures for the
+tokenization-tax claim, since that's what actually determines real context
+usage and cost for those models. Where no native tokenizer is loadable
+(Anthropic, OpenAI, a gated repo, or no network access), `tiktoken`
+`cl100k_base` is used as a clearly-labeled fallback approximation. Which one
+was actually used is always recorded via `tokenizer_model_id`/
+`tokenizer_revision`. `word_count`/`char_count` are supplementary
+descriptive stats only — not a substitute for either token-count figure.
 `input_tokens`/`output_tokens` (each provider's own exact `usage` figures)
-remain the authoritative totals.
+remain the authoritative totals for cost accounting.
 
 ## 9. Manipulation / post-run annotation checks
 
@@ -263,13 +297,22 @@ completed run's result file and writes
 `text_track/data/annotations/{run_id}_annotation_template.csv`, keyed by
 `(run_id, item_id, model_key, condition_key, stage)`, with:
 
-- Derived automatically (not a judgment call): `rationale_present`,
-  `requested_language`.
-- Left blank for a human annotator: `language_compliance` (`compliant` /
-  `mixed` / `noncompliant` / `uncertain`), `translation_faithfulness`
-  (`accurate` / `minor_error` / `major_error` / `unusable`),
-  `translation_error_type` (`none` / `lexical` / `morphological` /
-  `semantic` / `omission` / `addition`), `annotation_notes`, `annotator`.
+- Derived automatically (not a judgment call): `has_text_beyond_answer`
+  (`grading.has_text_beyond_answer()` — strips the answer tag and known
+  fallback-answer forms like `\boxed{...}` before checking for any
+  remaining word characters, so an answer-only response like
+  `<answer>109</answer>` correctly reads `False`) and `requested_language`
+  (`None` for `A_E0`/`A_I0` — direct-answer controls have a language-neutral
+  canonical answer and no rationale, so no rationale-language judgment
+  applies to them).
+- Left blank for a human annotator: `rationale_present` (deliberately
+  **not** auto-derived — `has_text_beyond_answer` is a hint, not a
+  determination; a response can have leftover text that still isn't a real
+  explanation), `language_compliance` (`compliant` / `mixed` /
+  `noncompliant` / `uncertain`), `translation_faithfulness` (`accurate` /
+  `minor_error` / `major_error` / `unusable`), `translation_error_type`
+  (`none` / `lexical` / `morphological` / `semantic` / `omission` /
+  `addition`), `annotation_notes`, `annotator`.
 
 Annotations are joined back against the inference data during analysis by
 the same key tuple — `analyze.py`'s eventual rewrite (already a known
@@ -317,6 +360,8 @@ just aggregate pass/fail) should the full 1,000-item runs proceed.
   models — only the client code path, gated on `HPC_VLLM_BASE_URL` being
   set once the server is running (the user is handling the SLURM/HPC side
   directly, outside this repo).
-- The local tokenizer (`tokenization.py`) is a consistent approximation
-  (tiktoken `cl100k_base`), not each provider's exact tokenizer — exact
-  per-provider tokenization is not implemented.
+- `tokenization.py` uses the model-native tokenizer for HPC/vLLM models
+  (Qwen), falling back to `tiktoken` `cl100k_base` only where no native
+  tokenizer is loadable (Anthropic, OpenAI, gated repos). Exact native
+  tokenization for Claude/GPT-5.2/Llama is not implemented — those always
+  use the tiktoken approximation.

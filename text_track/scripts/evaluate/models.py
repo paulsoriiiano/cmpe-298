@@ -3,6 +3,9 @@
 Every provider implements the ModelClient protocol: complete(system, user, config) ->
 ModelResponse. This is the seam tests substitute a FakeModelClient into (see tests/fakes.py).
 """
+import dataclasses
+import hashlib
+import json
 import os
 import time
 from dataclasses import dataclass
@@ -14,19 +17,23 @@ class ModelConfig:
     key: str
     display_name: str
     provider: str                 # "anthropic" | "openai" | "openai_router" | "hpc"
-    model_id: str
+    model_id: str                  # the SERVED alias/name sent as the API "model" field
     endpoint: str | None = None
     temperature: float = 0.0
     supports_temperature: bool = True   # reasoning models often reject a non-default temperature
     max_output_tokens: int = 2048
     seed: int | None = None
     max_retries: int = 3
-    # Reproducibility metadata for the run manifest (see storage.write_run_manifest). Hosted
-    # APIs (Anthropic/OpenAI/HF router) don't expose most of these to clients, so they stay
-    # None for those providers rather than guessed. For HPC/vLLM models, values not known at
+    # Reproducibility metadata for the run manifest (see storage.write_run_manifest) and the
+    # resumption config fingerprint (see config_fingerprint()). Hosted APIs
+    # (Anthropic/OpenAI/HF router) don't expose most of these to clients, so they stay None
+    # for those providers rather than guessed. For HPC/vLLM models, values not known at
     # registry-definition time can be supplied via env vars at manifest-build time instead
     # of hardcoded here — see manifest_settings_for().
+    hf_repo: str | None = None              # actual underlying HF repo, if different from model_id
+    checkpoint_commit_sha: str | None = None
     revision: str | None = None
+    tokenizer_repo: str | None = None
     context_length: int | None = None
     thinking_mode: str | None = None
     precision: str | None = None
@@ -175,28 +182,49 @@ MODEL_REGISTRY: dict[str, ModelConfig] = {
 
 # Lets HPC-served models' reproducibility metadata be supplied at manifest-build time via
 # env vars (the actual vLLM config lives outside this repo, in whatever SLURM script the
-# user submits) rather than hardcoded into the registry ahead of time.
-_HPC_ENV_OVERRIDES = {
-    "revision": "HPC_MODEL_REVISION",
-    "context_length": "HPC_CONTEXT_LENGTH",
-    "precision": "HPC_PRECISION",
-    "vllm_version": "HPC_VLLM_VERSION",
-    "flashinfer_sampler": "HPC_FLASHINFER_SAMPLER",
+# user submits) rather than hardcoded into the registry ahead of time. Each entry is
+# (env_var_name, parser) — parser converts the raw string env value to the field's real
+# type, since every os.environ value is a str by construction.
+def _parse_bool_env(value: str) -> bool:
+    return value.strip().lower() in ("1", "true", "yes", "on", "enabled")
+
+
+_HPC_ENV_OVERRIDES: dict[str, tuple[str, type]] = {
+    "hf_repo": ("HPC_HF_REPO", str),
+    "checkpoint_commit_sha": ("HPC_CHECKPOINT_COMMIT_SHA", str),
+    "revision": ("HPC_MODEL_REVISION", str),
+    "tokenizer_repo": ("HPC_TOKENIZER_REPO", str),
+    "context_length": ("HPC_CONTEXT_LENGTH", int),
+    "thinking_mode": ("HPC_THINKING_MODE", str),
+    "precision": ("HPC_PRECISION", str),
+    "vllm_version": ("HPC_VLLM_VERSION", str),
+    "flashinfer_sampler": ("HPC_FLASHINFER_SAMPLER", _parse_bool_env),
 }
 
 
 def manifest_settings_for(model_key: str) -> dict:
-    """Reproducibility metadata for one model, for embedding in the run manifest."""
-    import dataclasses
-
+    """Reproducibility metadata for one model, for embedding in the run manifest. Env-var
+    overrides are parsed into their proper types (int/bool), not left as raw strings."""
     config = MODEL_REGISTRY[model_key]
     settings = dataclasses.asdict(config)
     if config.provider == "hpc":
-        for field_name, env_name in _HPC_ENV_OVERRIDES.items():
-            value = os.environ.get(env_name)
-            if value is not None:
-                settings[field_name] = value
+        for field_name, (env_name, parser) in _HPC_ENV_OVERRIDES.items():
+            raw_value = os.environ.get(env_name)
+            if raw_value is not None:
+                settings[field_name] = parser(raw_value)
     return settings
+
+
+def config_fingerprint(model_key: str, tokenizer_revision: str | None = None) -> str:
+    """A short, stable hash of everything that determines this model's actual behavior:
+    exact checkpoint, precision, sampling settings, serving config, and tokenizer revision.
+    Included in every ResultRecord and the resume key (see storage.make_resume_key) so a
+    changed model configuration — e.g. a different vLLM precision, or a checkpoint update —
+    can never be silently treated as equivalent to an older run's results."""
+    settings = manifest_settings_for(model_key)
+    settings["tokenizer_revision"] = tokenizer_revision
+    canonical = json.dumps(settings, sort_keys=True, default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
 _CLIENT_CACHE: dict[str, ModelClient] = {}

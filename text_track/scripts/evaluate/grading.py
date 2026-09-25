@@ -159,6 +159,35 @@ def extract_fallback_answer(text: str | None, source: str | None) -> str | None:
     return None
 
 
+_ANSWER_TAG_RE = re.compile(r'<answer>.*?</answer>', re.IGNORECASE | re.DOTALL)
+
+
+def strip_answer_content(text: str | None) -> str:
+    """Remove the answer tag and known fallback-answer forms (\\boxed{...}, a "final answer
+    is X" sentence) from a response, leaving whatever text remains. Used to check whether a
+    response actually contains an explanation, as opposed to only an answer — a naive
+    `bool(generated_rationale)` check is wrong here: <answer>109</answer> is nonempty but is
+    exactly the answer-only behavior a rationale-presence check needs to catch."""
+    if not text:
+        return ""
+    remainder = _ANSWER_TAG_RE.sub("", text)
+    remainder = _BOXED_RE.sub("", remainder)
+    remainder = _FINAL_ANSWER_RE.sub("", remainder)
+    # Leftover LaTeX display-math delimiters ($$...$$) around a now-removed \boxed{...}
+    # aren't meaningful text on their own.
+    remainder = remainder.replace("$$", "").replace("$", "")
+    return remainder.strip()
+
+
+def has_text_beyond_answer(text: str | None) -> bool:
+    """True if strip_answer_content(text) leaves any word characters — not just leftover
+    punctuation/whitespace. This is a heuristic diagnostic, not a substitute for human
+    judgment of whether that remainder is an actual explanation (see
+    generate_annotation_template.py's rationale_present, which is intentionally left for a
+    human annotator rather than inferred automatically)."""
+    return re.search(r'\w', strip_answer_content(text)) is not None
+
+
 def looks_like_translation_format_failure(translated_text: str) -> bool:
     """Heuristic: a translation-stage response that is empty, wraps itself in <answer>
     tags (i.e. tried to solve instead of translate), or is implausibly short/long."""

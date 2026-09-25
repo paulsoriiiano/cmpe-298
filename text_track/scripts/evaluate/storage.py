@@ -21,6 +21,7 @@ class ResultRecord:
     item_id: str
     source: str
     model_key: str
+    config_fingerprint: str          # see models.config_fingerprint() — hashes exact model/serving config
     condition_key: str
     stage: str                      # "direct" | "translate" | "reason"
     prompt_version: str
@@ -35,11 +36,15 @@ class ResultRecord:
     failure_type: str
     input_tokens: int | None          # exact, from the provider's usage object
     output_tokens: int | None         # exact, from the provider's usage object
-    system_prompt_tokens: int | None  # local tokenizer estimate — see tokenization.py
-    user_input_tokens: int | None     # local tokenizer estimate
-    rendered_prompt_tokens: int | None  # local tokenizer estimate; sanity-check vs input_tokens
-    tokenizer_id: str | None
+    question_en_tokens: int | None     # model-native tokenizer count where available — see tokenization.py
+    question_ilo_tokens: int | None
+    translation_tokens: int | None      # None when this record has no translation (e.g. reason/direct stage)
+    rationale_tokens: int | None        # None when this record has no rationale (e.g. translate stage)
+    tokenization_tax_ratio: float | None  # question_ilo_tokens / question_en_tokens
+    tokenizer_model_id: str | None
     tokenizer_revision: str | None
+    word_count: int | None            # descriptive only — not a substitute for token counts
+    char_count: int | None
     finish_reason: str | None
     latency_ms: float
     retry_count: int
@@ -49,14 +54,15 @@ class ResultRecord:
     def resume_key(self) -> tuple:
         return make_resume_key(
             dataset_version=self.dataset_version, protocol_version=self.protocol_version,
-            prompt_version=self.prompt_version, item_id=self.item_id, model_key=self.model_key,
-            condition_key=self.condition_key, stage=self.stage,
+            prompt_version=self.prompt_version, config_fingerprint=self.config_fingerprint,
+            item_id=self.item_id, model_key=self.model_key, condition_key=self.condition_key,
+            stage=self.stage,
         )
 
 
 def make_resume_key(
-    *, dataset_version: str, protocol_version: str, prompt_version: str, item_id: str,
-    model_key: str, condition_key: str, stage: str,
+    *, dataset_version: str, protocol_version: str, prompt_version: str,
+    config_fingerprint: str, item_id: str, model_key: str, condition_key: str, stage: str,
 ) -> tuple:
     """Single source of truth for the resume-key shape, used both by ResultRecord.resume_key()
     and by run.py's lookups BEFORE a record exists — keeping both in sync is the whole point
@@ -64,12 +70,14 @@ def make_resume_key(
     drifted out of sync when prompt_version was added to one but not the other).
 
     Includes prompt_version so a prompt-wording change (even under the same protocol_version)
-    can't accidentally resume/reuse a stale result. In practice prompt_version changes are
-    expected to ship alongside a protocol_version bump (see conditions.PROTOCOL_VERSION), but
-    this doesn't rely on that discipline.
+    can't accidentally resume/reuse a stale result, and config_fingerprint so a changed model
+    configuration (different checkpoint, precision, sampling settings, serving config) can't
+    either. In practice prompt_version changes are expected to ship alongside a
+    protocol_version bump (see conditions.PROTOCOL_VERSION), but this doesn't rely on that
+    discipline.
     """
-    return (dataset_version, protocol_version, prompt_version, item_id, model_key,
-            condition_key, stage)
+    return (dataset_version, protocol_version, prompt_version, config_fingerprint, item_id,
+            model_key, condition_key, stage)
 
 
 NON_RETRYABLE_FAILURE_TYPES = {
@@ -79,11 +87,34 @@ NON_RETRYABLE_FAILURE_TYPES = {
 }
 
 
+_RESULT_RECORD_FIELDS = {f.name for f in dataclasses.fields(ResultRecord)}
+
+
+def _lenient_record_from_row(row: dict) -> ResultRecord | None:
+    """Tolerates JSONL rows from an older schema (e.g. a protocol_v1 file read by a v2
+    evaluator that added new fields like config_fingerprint/tokenization_tax_ratio) by
+    filling any missing fields with None, rather than crashing the whole run. Unknown keys
+    in the row (from an even newer schema) are silently dropped. Returns None if the row
+    can't be turned into a ResultRecord at all (e.g. it's not a dict, or a required value
+    has the wrong type) — such a row is skipped rather than guessed at; it simply won't
+    match any current lookup key, so a genuinely incompatible/corrupt row can't accidentally
+    be treated as completed work."""
+    if not isinstance(row, dict):
+        return None
+    filtered = {k: v for k, v in row.items() if k in _RESULT_RECORD_FIELDS}
+    for name in _RESULT_RECORD_FIELDS:
+        filtered.setdefault(name, None)
+    try:
+        return ResultRecord(**filtered)
+    except TypeError:
+        return None
+
+
 class ResumeIndex:
-    """Tracks which (dataset_version, protocol_version, item_id, model_key, condition_key,
-    stage) units are already completed, scanned from every existing eval_runs/*.jsonl file.
-    Units whose recorded failure_type is retry-eligible (infrastructure_api_failure) are NOT
-    considered complete."""
+    """Tracks which (dataset_version, protocol_version, prompt_version, config_fingerprint,
+    item_id, model_key, condition_key, stage) units are already completed, scanned from
+    every existing eval_runs/*.jsonl file. Units whose recorded failure_type is retry-eligible
+    (infrastructure_api_failure) are NOT considered complete."""
 
     def __init__(self):
         self._completed: dict[tuple, ResultRecord] = {}
@@ -101,9 +132,13 @@ class ResumeIndex:
                 for line in f:
                     if not line.strip():
                         continue
-                    row = json.loads(line)
-                    record = ResultRecord(**row)
-                    index.record_if_newer(record)
+                    try:
+                        row = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue  # a corrupt/truncated line shouldn't crash the whole run
+                    record = _lenient_record_from_row(row)
+                    if record is not None:
+                        index.record_if_newer(record)
         return index
 
     def record_if_newer(self, record: ResultRecord) -> None:
@@ -156,6 +191,14 @@ def _git_commit() -> str | None:
         return None
 
 
+# Manifest fields that must match exactly if a run_id is reused (e.g. restarting a failed
+# SLURM job under the same predetermined run_id) — anything else (timestamps, planned-unit
+# counts derived from a possibly-different item selection) is allowed to differ.
+_MANIFEST_COMPATIBILITY_FIELDS = (
+    "dataset_version", "protocol_version", "conditions", "models", "model_settings",
+)
+
+
 def write_run_manifest(
     *,
     run_id: str,
@@ -176,24 +219,47 @@ def write_run_manifest(
     precision, and — for HPC/vLLM models — vLLM version and FlashInfer sampler setting).
     Fields not knowable for a given provider (e.g. hosted APIs don't expose precision) are
     left null by the caller rather than guessed here.
+
+    If a manifest already exists for this run_id (e.g. restarting a failed SLURM job under
+    the same predetermined run_id — see __main__.py's --run-id), its dataset/protocol
+    version, conditions, models, and model_settings must match exactly, or this raises
+    rather than silently overwriting a manifest that no longer describes what's actually in
+    the result JSONL for that run_id.
     """
     import datetime
 
     os.makedirs(runs_dir, exist_ok=True)
+    path = os.path.join(runs_dir, f"{run_id}.manifest.json")
+
+    new_values = {
+        "dataset_version": dataset_version, "protocol_version": protocol_version,
+        "conditions": conditions, "models": models, "model_settings": model_settings or {},
+    }
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            existing = json.load(f)
+        mismatches = {
+            field: (existing.get(field), new_values[field])
+            for field in _MANIFEST_COMPATIBILITY_FIELDS
+            if existing.get(field) != new_values[field]
+        }
+        if mismatches:
+            raise ValueError(
+                f"Refusing to overwrite manifest for run_id={run_id!r}: incompatible "
+                f"settings would be silently applied to an existing run. Mismatches "
+                f"(existing vs. new): {mismatches}. Use a new run_id for a genuinely "
+                f"different configuration."
+            )
+
     manifest = {
         "run_id": run_id,
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "git_commit": _git_commit(),
-        "dataset_version": dataset_version,
-        "protocol_version": protocol_version,
-        "conditions": conditions,
-        "models": models,
-        "model_settings": model_settings or {},
+        **new_values,
         "total_planned_units": total_planned_units,
         "planned_item_ids_by_condition": planned_item_ids_by_condition or {},
         "resuming_from_run_ids": resuming_from_run_ids or [],
     }
-    path = os.path.join(runs_dir, f"{run_id}.manifest.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
     return path
