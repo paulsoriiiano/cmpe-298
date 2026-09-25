@@ -65,7 +65,7 @@ def _run_single_call_condition(
     response, exception, retry_count, latency_ms = complete_with_retry(
         model_key, system=system, user=user_input,
     )
-    failure_type, extracted, is_correct = grading.classify_result(
+    failure_type, extracted, is_correct, format_compliant = grading.classify_result(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="reason",
     )
@@ -77,7 +77,7 @@ def _run_single_call_condition(
         generated_rationale=response.text if response else None,
         raw_response=response.text if response else None,
         extracted_answer=extracted, canonical_answer=item["canonical_answer"],
-        is_correct=is_correct, format_compliant=grading.format_compliant_for(failure_type),
+        is_correct=is_correct, format_compliant=format_compliant,
         failure_type=failure_type.value,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
@@ -106,7 +106,7 @@ def _run_direct_condition(
     response, exception, retry_count, latency_ms = complete_with_retry(
         model_key, system=system, user=user_input,
     )
-    failure_type, extracted, is_correct = grading.classify_result(
+    failure_type, extracted, is_correct, format_compliant = grading.classify_result(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="direct",
     )
@@ -117,7 +117,7 @@ def _run_direct_condition(
         original_input=user_input, generated_translation=None, generated_rationale=None,
         raw_response=response.text if response else None,
         extracted_answer=extracted, canonical_answer=item["canonical_answer"],
-        is_correct=is_correct, format_compliant=grading.format_compliant_for(failure_type),
+        is_correct=is_correct, format_compliant=format_compliant,
         failure_type=failure_type.value,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
@@ -151,7 +151,7 @@ def _run_staged_pivot_condition(
         response, exception, retry_count, latency_ms = complete_with_retry(
             model_key, system=translation_system, user=user_input,
         )
-        failure_type, _, _ = grading.classify_result(
+        failure_type, _, _, format_compliant = grading.classify_result(
             response=response, exception=exception, canonical_answer=None,
             source=item["source"], stage="translate",
         )
@@ -162,7 +162,7 @@ def _run_staged_pivot_condition(
             original_input=user_input, generated_translation=response.text if response else None,
             generated_rationale=None, raw_response=response.text if response else None,
             extracted_answer=None, canonical_answer=item["canonical_answer"],
-            is_correct=None, format_compliant=grading.format_compliant_for(failure_type),
+            is_correct=None, format_compliant=format_compliant,
             failure_type=failure_type.value,
             input_tokens=response.input_tokens if response else None,
             output_tokens=response.output_tokens if response else None,
@@ -192,7 +192,7 @@ def _run_staged_pivot_condition(
     response, exception, retry_count, latency_ms = complete_with_retry(
         model_key, system=reasoning_system, user=translated_text,
     )
-    failure_type, extracted, is_correct = grading.classify_result(
+    failure_type, extracted, is_correct, format_compliant = grading.classify_result(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="reason",
     )
@@ -204,7 +204,7 @@ def _run_staged_pivot_condition(
         generated_rationale=response.text if response else None,
         raw_response=response.text if response else None,
         extracted_answer=extracted, canonical_answer=item["canonical_answer"],
-        is_correct=is_correct, format_compliant=grading.format_compliant_for(failure_type),
+        is_correct=is_correct, format_compliant=format_compliant,
         failure_type=failure_type.value,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
