@@ -33,8 +33,13 @@ class ResultRecord:
     is_correct: bool | None
     format_compliant: bool | None
     failure_type: str
-    input_tokens: int | None
-    output_tokens: int | None
+    input_tokens: int | None          # exact, from the provider's usage object
+    output_tokens: int | None         # exact, from the provider's usage object
+    system_prompt_tokens: int | None  # local tokenizer estimate — see tokenization.py
+    user_input_tokens: int | None     # local tokenizer estimate
+    rendered_prompt_tokens: int | None  # local tokenizer estimate; sanity-check vs input_tokens
+    tokenizer_id: str | None
+    tokenizer_revision: str | None
     finish_reason: str | None
     latency_ms: float
     retry_count: int
@@ -42,14 +47,35 @@ class ResultRecord:
     timestamp: str
 
     def resume_key(self) -> tuple:
-        return (self.dataset_version, self.protocol_version, self.item_id, self.model_key,
-                self.condition_key, self.stage)
+        return make_resume_key(
+            dataset_version=self.dataset_version, protocol_version=self.protocol_version,
+            prompt_version=self.prompt_version, item_id=self.item_id, model_key=self.model_key,
+            condition_key=self.condition_key, stage=self.stage,
+        )
+
+
+def make_resume_key(
+    *, dataset_version: str, protocol_version: str, prompt_version: str, item_id: str,
+    model_key: str, condition_key: str, stage: str,
+) -> tuple:
+    """Single source of truth for the resume-key shape, used both by ResultRecord.resume_key()
+    and by run.py's lookups BEFORE a record exists — keeping both in sync is the whole point
+    of factoring this out (a prior version of this key was built ad hoc in two places and
+    drifted out of sync when prompt_version was added to one but not the other).
+
+    Includes prompt_version so a prompt-wording change (even under the same protocol_version)
+    can't accidentally resume/reuse a stale result. In practice prompt_version changes are
+    expected to ship alongside a protocol_version bump (see conditions.PROTOCOL_VERSION), but
+    this doesn't rely on that discipline.
+    """
+    return (dataset_version, protocol_version, prompt_version, item_id, model_key,
+            condition_key, stage)
 
 
 NON_RETRYABLE_FAILURE_TYPES = {
     "correct", "substantively_incorrect", "invalid_answer_format", "missing_answer",
-    "translation_format_failure", "refusal", "truncation", "repetition_degeneration",
-    "parser_failure",
+    "translation_completed", "translation_format_failure", "refusal", "truncation",
+    "repetition_degeneration", "parser_failure",
 }
 
 
@@ -117,6 +143,19 @@ class RunWriter:
         self._file.close()
 
 
+def _git_commit() -> str | None:
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5,
+            cwd=SCRIPT_DIR, check=True,
+        )
+        return result.stdout.strip()
+    except Exception:  # noqa: BLE001 - not a git repo, git missing, etc. — manifest still writes
+        return None
+
+
 def write_run_manifest(
     *,
     run_id: str,
@@ -127,19 +166,29 @@ def write_run_manifest(
     total_planned_units: int,
     planned_item_ids_by_condition: dict[str, list[str]] | None = None,
     resuming_from_run_ids: list[str] | None = None,
+    model_settings: dict[str, dict] | None = None,
     runs_dir: str = RUNS_DIR,
 ) -> str:
-    """Write the run manifest BEFORE any API calls are made. Returns the manifest path."""
+    """Write the run manifest BEFORE any API calls are made. Returns the manifest path.
+
+    model_settings should map model_key -> a dict of reproducibility metadata (exact model
+    ID, revision, provider, temperature, max tokens, context length, thinking mode, seed,
+    precision, and — for HPC/vLLM models — vLLM version and FlashInfer sampler setting).
+    Fields not knowable for a given provider (e.g. hosted APIs don't expose precision) are
+    left null by the caller rather than guessed here.
+    """
     import datetime
 
     os.makedirs(runs_dir, exist_ok=True)
     manifest = {
         "run_id": run_id,
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "git_commit": _git_commit(),
         "dataset_version": dataset_version,
         "protocol_version": protocol_version,
         "conditions": conditions,
         "models": models,
+        "model_settings": model_settings or {},
         "total_planned_units": total_planned_units,
         "planned_item_ids_by_condition": planned_item_ids_by_condition or {},
         "resuming_from_run_ids": resuming_from_run_ids or [],

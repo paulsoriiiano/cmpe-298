@@ -64,8 +64,9 @@ class RunEvaluationDryRunTests(unittest.TestCase):
             self.assertEqual(record["model_key"], "claude_sonnet_4_6")
             self.assertIn(record["failure_type"], {
                 "correct", "substantively_incorrect", "invalid_answer_format",
-                "missing_answer", "translation_format_failure", "refusal", "truncation",
-                "repetition_degeneration", "parser_failure", "infrastructure_api_failure",
+                "missing_answer", "translation_completed", "translation_format_failure",
+                "refusal", "truncation", "repetition_degeneration", "parser_failure",
+                "infrastructure_api_failure",
             })
             if record["stage"] == "translate":
                 self.assertIsNotNone(record["generated_translation"])

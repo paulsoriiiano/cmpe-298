@@ -22,6 +22,7 @@ class FailureType(str, Enum):
     SUBSTANTIVELY_INCORRECT = "substantively_incorrect"
     INVALID_ANSWER_FORMAT = "invalid_answer_format"
     MISSING_ANSWER = "missing_answer"
+    TRANSLATION_COMPLETED = "translation_completed"
     TRANSLATION_FORMAT_FAILURE = "translation_format_failure"
     REFUSAL = "refusal"
     TRUNCATION = "truncation"
@@ -203,7 +204,12 @@ def classify_result(
     if stage == "translate":
         if looks_like_translation_format_failure(response.text):
             return FailureType.TRANSLATION_FORMAT_FAILURE, None, None, None
-        return FailureType.CORRECT, None, None, None  # "correct" = usable translation
+        # TRANSLATION_COMPLETED means only: the API call succeeded, a nonempty translation
+        # candidate came back, and it didn't contain an answer tag. It does NOT mean the
+        # translation is linguistically correct or faithful — that's a separate manual
+        # annotation pass (see generate_annotation_template.py / PROTOCOL.md section 9),
+        # not something this heuristic can judge.
+        return FailureType.TRANSLATION_COMPLETED, None, None, None
 
     try:
         text = response.text or ""
@@ -218,15 +224,26 @@ def classify_result(
         if extracted is None:
             return FailureType.MISSING_ANSWER, None, None, False
 
-        # _semantic_class (not normalize_answer) so Ilokano "Wen"/"Saan" pass the
-        # bbh_causal_judgement shape check the same as "Yes"/"No" would.
-        normalized = _semantic_class(extracted)
         shape = _ANSWER_SHAPE_BY_SOURCE.get(source) if source else None
-        if shape is not None and normalized is not None and not shape.match(normalized.upper()):
-            # Tag/fallback content doesn't look like a plausible answer for this source —
-            # noncompliant regardless of whether a tag was present, since the contract is
-            # "a clean single value," not just "wrapped in a tag."
+
+        # Lenient check (via _semantic_class): is this even a plausible/gradable answer
+        # for this source? "Wen"/"Saan" pass here — they're valid Ilokano tokens for the
+        # causal-judgement contract's underlying semantics, just not the literal YES/NO
+        # vocabulary the contract specifies. A response that isn't even in the right
+        # ballpark (e.g. a sentence where a bare letter was expected) fails here.
+        lenient_class = _semantic_class(extracted)
+        if shape is not None and lenient_class is not None and not shape.match(lenient_class.upper()):
             return FailureType.INVALID_ANSWER_FORMAT, extracted, False, False
+
+        # Strict check (via normalize_answer, no Ilokano mapping): does the LITERAL content
+        # match the canonical vocabulary the format contract requires? "Wen"/"Saan" fail
+        # here even though they're semantically gradable — the contract specifically wants
+        # YES/NO, not a same-meaning Ilokano token. This only diverges from the lenient
+        # check for bbh_causal_judgement; every other source's shape check is identical
+        # either way, since there's no per-language token divergence there.
+        strict_class = normalize_answer(extracted)
+        strict_ok = shape is None or strict_class is None or bool(shape.match(strict_class.upper()))
+        format_compliant = format_compliant and strict_ok
 
         is_correct = grade(extracted, canonical_answer) if canonical_answer is not None else False
         if is_correct:

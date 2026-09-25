@@ -63,7 +63,7 @@ class ResumptionTests(unittest.TestCase):
         translate_records = [r for r in records if r["stage"] == "translate"]
         reason_records = [r for r in records if r["stage"] == "reason"]
         self.assertEqual(len(translate_records), 1)
-        self.assertEqual(translate_records[0]["failure_type"], "correct")
+        self.assertEqual(translate_records[0]["failure_type"], "translation_completed")
         self.assertEqual(len(reason_records), 1)
         self.assertEqual(reason_records[0]["failure_type"], "infrastructure_api_failure")
 

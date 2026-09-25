@@ -21,6 +21,17 @@ class ModelConfig:
     max_output_tokens: int = 2048
     seed: int | None = None
     max_retries: int = 3
+    # Reproducibility metadata for the run manifest (see storage.write_run_manifest). Hosted
+    # APIs (Anthropic/OpenAI/HF router) don't expose most of these to clients, so they stay
+    # None for those providers rather than guessed. For HPC/vLLM models, values not known at
+    # registry-definition time can be supplied via env vars at manifest-build time instead
+    # of hardcoded here — see manifest_settings_for().
+    revision: str | None = None
+    context_length: int | None = None
+    thinking_mode: str | None = None
+    precision: str | None = None
+    vllm_version: str | None = None
+    flashinfer_sampler: bool | None = None
 
 
 @dataclass
@@ -127,6 +138,7 @@ MODEL_REGISTRY: dict[str, ModelConfig] = {
         display_name="Claude Sonnet 4.6",
         provider="anthropic",
         model_id="claude-sonnet-4-6",
+        context_length=200_000,
     ),
     "llama_3_8b": ModelConfig(
         key="llama_3_8b",
@@ -134,6 +146,7 @@ MODEL_REGISTRY: dict[str, ModelConfig] = {
         provider="openai_router",
         model_id="meta-llama/Meta-Llama-3-8B-Instruct",
         endpoint="https://router.huggingface.co/v1",
+        context_length=8192,
     ),
     "gpt_5_2_thinking": ModelConfig(
         key="gpt_5_2_thinking",
@@ -159,6 +172,32 @@ MODEL_REGISTRY: dict[str, ModelConfig] = {
         model_id="qwen-sealion-v4.5-27b-it",
     ),
 }
+
+# Lets HPC-served models' reproducibility metadata be supplied at manifest-build time via
+# env vars (the actual vLLM config lives outside this repo, in whatever SLURM script the
+# user submits) rather than hardcoded into the registry ahead of time.
+_HPC_ENV_OVERRIDES = {
+    "revision": "HPC_MODEL_REVISION",
+    "context_length": "HPC_CONTEXT_LENGTH",
+    "precision": "HPC_PRECISION",
+    "vllm_version": "HPC_VLLM_VERSION",
+    "flashinfer_sampler": "HPC_FLASHINFER_SAMPLER",
+}
+
+
+def manifest_settings_for(model_key: str) -> dict:
+    """Reproducibility metadata for one model, for embedding in the run manifest."""
+    import dataclasses
+
+    config = MODEL_REGISTRY[model_key]
+    settings = dataclasses.asdict(config)
+    if config.provider == "hpc":
+        for field_name, env_name in _HPC_ENV_OVERRIDES.items():
+            value = os.environ.get(env_name)
+            if value is not None:
+                settings[field_name] = value
+    return settings
+
 
 _CLIENT_CACHE: dict[str, ModelClient] = {}
 

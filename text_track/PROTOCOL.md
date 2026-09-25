@@ -1,10 +1,19 @@
 # Experimental Protocol
 
-- Protocol version: `protocol_v1`
-- Date: 2026-09-23 (implementation status updated 2026-09-24)
+- Protocol version: `protocol_v2`
+- Date: 2026-09-23 (implementation status updated 2026-09-24; v2 revision 2026-09-25)
 - Pinned dataset version: `dataset_conference_v1.1` (see `data/dataset_manifest.json`)
 - **STATUS: implemented in `text_track/scripts/evaluate/`, not yet piloted. No real
-  model API calls have been made under this protocol (only fake-client tests).**
+  model API calls have been made under `protocol_v2` (only fake-client tests so far).**
+
+**Why v2 exists**: a real pilot call to `qwen_3_6_27b` under `protocol_v1` surfaced two
+problems this revision fixes: (1) the reasoning prompts were satisfiable with only a tag
+and no explanation, which isn't what the reasoning conditions are meant to measure, and
+(2) the grader only recognized the literal `<answer>` tag, so a fully correct response
+ending in `\boxed{109}` was misclassified as a missing answer. Since prompts changed,
+`PROTOCOL_VERSION` and every condition's `prompt_version` both bumped to `v2` — the
+resume key includes both, so no `protocol_v1`/`prompt_v1` result can be silently reused
+under `v2` (see section 8).
 
 ## 1. Conditions
 
@@ -75,34 +84,84 @@ Validation passed for all 1,000 items with zero failures.
 
 ## 3. Output schema
 
-Every condition, including the direct-answer controls, uses the same
-tagged-answer contract already defined by `_ANSWER_RULE` in `evaluate.py`:
-the model must end its response with `<answer>VALUE</answer>`, containing
-only the final value (no units, no explanation).
+Reasoning conditions (`A_EE`/`A_II`/`A_IE`/`A_EI`) require a **two-part
+response**: a written solution explanation in the specified language,
+followed by the final answer enclosed in `<answer>VALUE</answer>` tags. An
+answer-only response with no explanation does not satisfy these conditions
+— that's what the direct-answer controls (`A_E0`/`A_I0`) are for. See
+`TWO_PART_RULE_V2` in `conditions.py`.
 
-Grading must record two separate axes, per the conference plan:
-- **Semantic correctness**: does the extracted, normalized value match
-  `canonical_answer` regardless of surface form (e.g. `"(A)"`, `"a"`, `"Wen"`
-  are all valid surface forms of the same semantic answer).
-- **Format compliance**: did the model actually emit a well-formed
-  `<answer>` tag containing (after normalization) exactly the canonical
-  token, with no extra content.
+Grading records two separate axes, per the conference plan:
+- **Semantic correctness** (`is_correct`): does the extracted answer match
+  `canonical_answer` regardless of surface form (e.g. `"(A)"`, `"a"`, and
+  Ilokano `"Wen"` for a `YES` canonical answer are all semantically
+  equivalent).
+- **Format compliance** (`format_compliant`): did the model follow the
+  required contract exactly — a well-formed `<answer>` tag containing
+  literally the canonical vocabulary?
+
+These two axes are independent, not derived from one another. Two real
+cases from piloting motivate this:
+- A response with no `<answer>` tag at all, ending in LaTeX `\boxed{109}`,
+  is recovered via fallback extraction (see below), graded `is_correct=True`,
+  but `format_compliant=False` — the tag contract wasn't followed, even
+  though the answer is right.
+- `<answer>Wen</answer>` for a `bbh_causal_judgement` item whose canonical
+  answer is `YES`: `Wen` is semantically `YES` (`is_correct=True`), but the
+  format contract specifically requires the `YES`/`NO` vocabulary, not a
+  same-meaning Ilokano token — so `format_compliant=False` even though a
+  tag was present:
+
+  | Response | Semantic correctness | Format compliance |
+  |---|---|---|
+  | `<answer>YES</answer>` | correct | compliant |
+  | `<answer>Yes</answer>` | correct | compliant (after case normalization) |
+  | `<answer>Wen</answer>` | correct | **noncompliant** |
+  | `<answer>Saan</answer>` (gold `NO`) | correct | **noncompliant** |
+
+**Fallback extraction**: `grading.extract_fallback_answer()` recovers an
+answer when no `<answer>` tag is present, trying in order: LaTeX
+`\boxed{...}`, an explicit "final answer is X" sentence, then source-specific
+patterns (a parenthesized option letter for multiple choice, an explicit
+Yes/No/Wen/Saan token for causal judgement). A fallback-recovered answer is
+graded normally but is always `format_compliant=False`.
 
 This is implemented via `text_track/scripts/evaluate/storage.py`'s
 `ResultRecord`, which records `is_correct` and `format_compliant` as
-separate fields (`grading.classify_result()` derives both from the same
-failure-type classification — see `grading.FailureType`).
+separate fields; both are derived in `grading.classify_result()` (see
+`grading.FailureType`).
+
+**Translation stage status**: the translate stage's success status is
+`translation_completed`, not `correct` — it means only that the API call
+succeeded, a nonempty translation candidate came back, and it didn't
+contain an answer tag (i.e. the model didn't try to solve instead of
+translate). It says nothing about whether the translation is linguistically
+faithful — that's a separate manual check (section 9).
 
 ## 4. Prompts
 
 Prompts live in `text_track/scripts/evaluate/conditions.py`, versioned
-`prompt_v1` (the `ConditionConfig.prompt_version` field, recorded on every
-`ResultRecord`). This covers the single-call reasoning prompts (`A_EE`/`A_II`),
-the direct-answer prompts (`A_E0`/`A_I0`), and the staged-pivot
-translation/reasoning prompts (`A_IE`/`A_EI`) — including the
-translation-only prompts, which explicitly instruct the model not to solve
-the problem. Any future wording change should bump this to `prompt_v2` and
-note what changed.
+`prompt_v2` (the `ConditionConfig.prompt_version` field, recorded on every
+`ResultRecord`). `v2` changes from `v1`:
+
+- **Two-part enforcement** (`TWO_PART_RULE_V2`): `A_EE`, `A_II`, and both
+  reasoning-stage prompts of `A_IE`/`A_EI` now explicitly require a written
+  explanation followed by the answer tag, and explicitly forbid an
+  answer-only response. (`A_E0`/`A_I0` are unchanged — answer-only is
+  correct for those.)
+- **Ilokano-only enforcement**: `A_II` and `A_EI`'s reasoning-stage prompt
+  add: *"Do not return only the final answer. Provide the solution
+  explanation entirely in Ilokano. Do not use English except for proper
+  names, mathematical notation, and the canonical final-answer token."*
+- **EN→ILO translation completeness**: `TRANSLATE_EN_TO_ILO_SYSTEM` (used by
+  `A_EI`'s translate stage) adds: *"Translate the entire problem into
+  Ilokano. Do not leave sentences in English except proper names and option
+  labels."*
+
+Any future wording change should bump this to `prompt_v3` and note what
+changed — `ResultRecord`'s resume key includes `prompt_version` (section 8),
+so a version bump automatically prevents old-wording results from being
+mistaken for new-wording ones on resume.
 
 ## 5. Model settings
 
@@ -156,14 +215,108 @@ addressed by this protocol or by `add_canonical_answer.py`:
 Neither gap is fabricated a resolution here; both are stated as
 unreproducible-from-current-scripts for the record.
 
-## 8. Non-goals (still deferred)
+## 8. Resumption and reproducibility metadata
 
-- Does **not** run any pilot or full experiment under any condition against
-  real APIs — that's **Phase 4**. Everything above is implemented and
-  tested against a fake model client only (zero real API calls made so far).
+**Resume key**: `ResultRecord`'s resume key (`storage.make_resume_key()`) is
+`(dataset_version, protocol_version, prompt_version, item_id, model_key,
+condition_key, stage)`. Including `prompt_version` means a prompt-wording
+change under the same `protocol_version` can't accidentally reuse a stale
+result — though in practice we bump `PROTOCOL_VERSION` alongside any prompt
+change anyway (as with this `v2` revision), which invalidates old results by
+itself.
+
+**Run manifest** (`storage.write_run_manifest()`, written before any API
+calls): now also records `git_commit` (the evaluator's own commit hash at
+run time) and `model_settings` — one dict per model in the run
+(`models.manifest_settings_for()`), including model ID, provider,
+temperature, max output tokens, seed, and (where applicable) revision,
+context length, precision, vLLM version, and FlashInfer sampler setting.
+Hosted APIs (Anthropic/OpenAI/HF router) don't expose most of the
+serving-level fields to clients, so those stay `null` for those providers
+rather than guessed. For HPC/vLLM models, values not known when the
+registry entry was written can be supplied via env vars at manifest-build
+time (`HPC_MODEL_REVISION`, `HPC_CONTEXT_LENGTH`, `HPC_PRECISION`,
+`HPC_VLLM_VERSION`, `HPC_FLASHINFER_SAMPLER`) instead of hardcoding them
+into `models.py` ahead of the HPC serving setup being finalized.
+
+**Token counts**: each `ResultRecord` now also records
+`system_prompt_tokens`, `user_input_tokens`, and `rendered_prompt_tokens`
+(local approximate counts from `tokenization.py`, using `tiktoken`'s
+`cl100k_base` encoding as one consistent approximation across all
+providers), plus `tokenizer_id`/`tokenizer_revision` so the approximation is
+traceable. This is **not** the exact tokenizer for Claude, Llama, Qwen, or
+GPT-5.2 — it exists to let translate-stage vs. reason-stage costs, and
+system-prompt vs. per-item costs, be compared consistently across
+conditions/models, not to give exact per-provider token accounting.
+`input_tokens`/`output_tokens` (each provider's own exact `usage` figures)
+remain the authoritative totals.
+
+## 9. Manipulation / post-run annotation checks
+
+Automatic language identification for Ilokano is not trusted for judging
+whether a model actually reasoned in Ilokano when asked to, or whether a
+translation is faithful — these require human annotation, done as a
+**separate pass that never modifies the immutable inference JSONL**.
+
+`text_track/scripts/generate_annotation_template.py <run_id>` reads a
+completed run's result file and writes
+`text_track/data/annotations/{run_id}_annotation_template.csv`, keyed by
+`(run_id, item_id, model_key, condition_key, stage)`, with:
+
+- Derived automatically (not a judgment call): `rationale_present`,
+  `requested_language`.
+- Left blank for a human annotator: `language_compliance` (`compliant` /
+  `mixed` / `noncompliant` / `uncertain`), `translation_faithfulness`
+  (`accurate` / `minor_error` / `major_error` / `unusable`),
+  `translation_error_type` (`none` / `lexical` / `morphological` /
+  `semantic` / `omission` / `addition`), `annotation_notes`, `annotator`.
+
+Annotations are joined back against the inference data during analysis by
+the same key tuple — `analyze.py`'s eventual rewrite (already a known
+deferred item, section 11) will need to perform that join, not read
+annotations as if they were part of the inference schema.
+
+## 10. Pilot requirements before full-scale runs
+
+Before downloading/running the full 27B models, run a **source-diverse**
+pilot: at least one item from each of the five sources (GSM8K, BBH logical
+deduction, BBH causal judgement, MMLU conceptual physics, MMLU formal
+logic), across all six conditions. A single-item (`gsm8k_0`-only) pilot is
+what surfaced this `v2` revision's fixes — a source-diverse pilot is needed
+to also exercise: four- and five-option letters, YES/NO vs. Wen/Saan,
+Ilokano rationale compliance, English↔Ilokano translation behavior,
+fallback extraction, and direct-answer behavior, per source.
+
+Use `run_evaluation(..., item_ids=[...])` or the CLI's `--item-ids` flag to
+restrict a run to a hand-picked list of IDs across all sources — this
+overrides both the full-dataset default and the `A_E0`/`A_I0`
+stratified-subset restriction, so a pilot can exercise every condition on
+exactly the chosen items:
+
+```bash
+python3 -m text_track.scripts.evaluate \
+    --item-ids gsm8k_0 bbh_logic_0 bbh_causal_250 mmlu_logic_0 mmlu_physics_126 \
+    --conditions A_EE A_II A_IE A_EI A_E0 A_I0 \
+    --models <model_key>
+```
+
+Only after this pilot's outputs have been inspected (raw responses, not
+just aggregate pass/fail) should the full 1,000-item runs proceed.
+
+## 11. Non-goals (still deferred)
+
+- Does **not** run the full 1,000-item experiment against real APIs yet —
+  that requires the source-diverse pilot (section 10) to pass first.
+  Everything above is implemented and tested against a fake model client
+  only, aside from the single-item exploratory pilot that motivated `v2`.
 - Does **not** modify `analyze.py` — its rewrite for the new per-item×model×
-  condition×stage result schema is a separate, later phase.
+  condition×stage result schema, including the annotation join (section 9),
+  is a separate, later phase.
 - Does **not** attempt to resolve the provenance gaps in section 7.
 - Does **not** implement the actual HPC/vLLM deployment for the Qwen
   models — only the client code path, gated on `HPC_VLLM_BASE_URL` being
-  set once the server is running.
+  set once the server is running (the user is handling the SLURM/HPC side
+  directly, outside this repo).
+- The local tokenizer (`tokenization.py`) is a consistent approximation
+  (tiktoken `cl100k_base`), not each provider's exact tokenizer — exact
+  per-provider tokenization is not implemented.

@@ -9,12 +9,13 @@ import uuid
 
 from . import conditions as cond_mod
 from . import grading
+from . import tokenization
 from .conditions import (
     CONDITIONS, IMPLEMENTED_CONDITIONS, STRATIFIED_SUBSET_CONDITIONS, get_condition,
     require_implemented,
 )
-from .models import MODEL_REGISTRY, complete_with_retry
-from .storage import RUNS_DIR, ResultRecord, ResumeIndex, RunWriter, write_run_manifest
+from .models import MODEL_REGISTRY, complete_with_retry, manifest_settings_for
+from .storage import RUNS_DIR, ResultRecord, ResumeIndex, RunWriter, make_resume_key, write_run_manifest
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATASET_PATH = os.path.join(SCRIPT_DIR, "..", "..", "data", "dataset.jsonl")
@@ -55,7 +56,11 @@ def _run_single_call_condition(
     writer,
 ):
     """A_EE / A_II: one call, question -> rationale -> canonical answer."""
-    key = (dataset_version, protocol_version, item["id"], model_key, condition.key, "reason")
+    key = make_resume_key(
+        dataset_version=dataset_version, protocol_version=protocol_version,
+        prompt_version=condition.prompt_version, item_id=item["id"], model_key=model_key,
+        condition_key=condition.key, stage="reason",
+    )
     if resume_index.is_complete(key):
         return resume_index.get(key)
 
@@ -81,6 +86,7 @@ def _run_single_call_condition(
         failure_type=failure_type.value,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
+        **tokenization.count_prompt_tokens(system, user_input),
         finish_reason=response.finish_reason if response else None,
         latency_ms=latency_ms, retry_count=retry_count,
         error_message=str(exception) if exception else None, timestamp=_now_iso(),
@@ -96,7 +102,11 @@ def _run_direct_condition(
 ):
     """A_E0 / A_I0: one call, question -> canonical answer directly, no rationale. Runs only
     over the fixed 300-item stratified subset (see STRATIFIED_SUBSET_CONDITIONS)."""
-    key = (dataset_version, protocol_version, item["id"], model_key, condition.key, "direct")
+    key = make_resume_key(
+        dataset_version=dataset_version, protocol_version=protocol_version,
+        prompt_version=condition.prompt_version, item_id=item["id"], model_key=model_key,
+        condition_key=condition.key, stage="direct",
+    )
     if resume_index.is_complete(key):
         return resume_index.get(key)
 
@@ -121,6 +131,7 @@ def _run_direct_condition(
         failure_type=failure_type.value,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
+        **tokenization.count_prompt_tokens(system, user_input),
         finish_reason=response.finish_reason if response else None,
         latency_ms=latency_ms, retry_count=retry_count,
         error_message=str(exception) if exception else None, timestamp=_now_iso(),
@@ -137,8 +148,16 @@ def _run_staged_pivot_condition(
     """A_IE / A_EI: translate (separate call, saved) -> fresh context -> reason using only
     the saved translation. Original question and canonical answer are never included in the
     reasoning-stage prompt."""
-    translate_key = (dataset_version, protocol_version, item["id"], model_key, condition.key, "translate")
-    reason_key = (dataset_version, protocol_version, item["id"], model_key, condition.key, "reason")
+    translate_key = make_resume_key(
+        dataset_version=dataset_version, protocol_version=protocol_version,
+        prompt_version=condition.prompt_version, item_id=item["id"], model_key=model_key,
+        condition_key=condition.key, stage="translate",
+    )
+    reason_key = make_resume_key(
+        dataset_version=dataset_version, protocol_version=protocol_version,
+        prompt_version=condition.prompt_version, item_id=item["id"], model_key=model_key,
+        condition_key=condition.key, stage="reason",
+    )
 
     translate_record = resume_index.get(translate_key)
     if translate_record is None or not resume_index.is_complete(translate_key):
@@ -166,6 +185,7 @@ def _run_staged_pivot_condition(
             failure_type=failure_type.value,
             input_tokens=response.input_tokens if response else None,
             output_tokens=response.output_tokens if response else None,
+            **tokenization.count_prompt_tokens(translation_system, user_input),
             finish_reason=response.finish_reason if response else None,
             latency_ms=latency_ms, retry_count=retry_count,
             error_message=str(exception) if exception else None, timestamp=_now_iso(),
@@ -173,7 +193,7 @@ def _run_staged_pivot_condition(
         writer.append(translate_record)
         resume_index.record_if_newer(translate_record)
 
-    if translate_record.failure_type != grading.FailureType.CORRECT.value:
+    if translate_record.failure_type != grading.FailureType.TRANSLATION_COMPLETED.value:
         # Translation stage did not produce a usable translation (including infra failure);
         # do not proceed to the reasoning stage.
         return [translate_record]
@@ -208,6 +228,7 @@ def _run_staged_pivot_condition(
         failure_type=failure_type.value,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
+        **tokenization.count_prompt_tokens(reasoning_system, translated_text),
         finish_reason=response.finish_reason if response else None,
         latency_ms=latency_ms, retry_count=retry_count,
         error_message=str(exception) if exception else None, timestamp=_now_iso(),
@@ -219,9 +240,14 @@ def _run_staged_pivot_condition(
 
 def run_evaluation(
     *, condition_keys: list[str], model_keys: list[str], limit: int | None = None,
+    item_ids: list[str] | None = None,
     dataset_path: str = DATASET_PATH, manifest_path: str = MANIFEST_PATH,
     runs_dir: str = RUNS_DIR, run_id: str | None = None,
 ):
+    """item_ids, if given, restricts every condition to exactly those item IDs (e.g. a
+    hand-picked source-diverse pilot slice — one item per source — per PROTOCOL.md section
+    9's pilot requirement) instead of running the full dataset / stratified subset. Applied
+    before `limit`, which still works as an additional cap if both are given."""
     for key in condition_keys:
         require_implemented(key)
     for key in model_keys:
@@ -229,13 +255,25 @@ def run_evaluation(
             raise ValueError(f"Unknown model: {key!r}. Known: {list(MODEL_REGISTRY)}")
 
     all_items = load_dataset(dataset_path)
+    if item_ids is not None:
+        wanted = set(item_ids)
+        all_items = [item for item in all_items if item["id"] in wanted]
+        missing = wanted - {item["id"] for item in all_items}
+        if missing:
+            raise ValueError(f"item_ids not found in dataset: {sorted(missing)}")
     dataset_version = load_dataset_version(manifest_path)
     protocol_version = cond_mod.PROTOCOL_VERSION
 
-    # Per-condition item pools: A_E0/A_I0 run only over the fixed 300-item stratified
-    # subset (per PROTOCOL.md section 1); every other condition runs over the full dataset.
+    # Per-condition item pools: A_E0/A_I0 normally run only over the fixed 300-item
+    # stratified subset (per PROTOCOL.md section 1); every other condition runs over the
+    # full dataset. When item_ids is given (e.g. a hand-picked pilot slice), it overrides
+    # the stratified-subset restriction too — the point of a pilot is to exercise every
+    # requested condition on exactly the chosen items, not to silently drop A_E0/A_I0
+    # because none of those IDs happened to land in the random 300-item subset.
     item_pools: dict[str, list[dict]] = {}
-    if any(key in STRATIFIED_SUBSET_CONDITIONS for key in condition_keys):
+    if item_ids is not None:
+        stratified_items = all_items
+    elif any(key in STRATIFIED_SUBSET_CONDITIONS for key in condition_keys):
         subset_ids = set(load_stratified_subset_ids())
         stratified_items = [item for item in all_items if item["id"] in subset_ids]
     else:
@@ -250,6 +288,7 @@ def run_evaluation(
         run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
         conditions=condition_keys, models=model_keys, total_planned_units=total_planned_units,
         planned_item_ids_by_condition={k: [item["id"] for item in item_pools[k]] for k in condition_keys},
+        model_settings={key: manifest_settings_for(key) for key in model_keys},
         runs_dir=runs_dir,
     )
 

@@ -73,7 +73,7 @@ class ClassifyResultTests(unittest.TestCase):
             response=CANNED["translation_ok"], exception=None,
             canonical_answer=None, source="gsm8k", stage="translate",
         )
-        self.assertEqual(failure_type, FailureType.CORRECT)
+        self.assertEqual(failure_type, FailureType.TRANSLATION_COMPLETED)
         self.assertIsNone(format_compliant)
 
     def test_invalid_answer_format_is_noncompliant(self):
@@ -93,6 +93,41 @@ class ClassifyResultTests(unittest.TestCase):
         )
         self.assertEqual(failure_type, FailureType.CORRECT)
         self.assertEqual(extracted, "109")
+        self.assertTrue(is_correct)
+        self.assertTrue(format_compliant)
+
+    def test_tagged_wen_is_correct_but_format_noncompliant(self):
+        """Real-pilot-driven case: <answer>Wen</answer> is semantically YES (correct), but
+        the format contract specifically requires the canonical YES/NO vocabulary — using a
+        same-meaning Ilokano token is not the same as following the contract, even though a
+        tag was present."""
+        response = canned_response("Rason...\n<answer>Wen</answer>")
+        failure_type, extracted, is_correct, format_compliant = classify_result(
+            response=response, exception=None, canonical_answer="YES",
+            source="bbh_causal_judgement", stage="reason",
+        )
+        self.assertEqual(failure_type, FailureType.CORRECT)
+        self.assertEqual(extracted, "Wen")
+        self.assertTrue(is_correct)
+        self.assertFalse(format_compliant)
+
+    def test_tagged_yes_uppercase_is_correct_and_compliant(self):
+        response = canned_response("Reasoning...\n<answer>YES</answer>")
+        failure_type, extracted, is_correct, format_compliant = classify_result(
+            response=response, exception=None, canonical_answer="YES",
+            source="bbh_causal_judgement", stage="reason",
+        )
+        self.assertEqual(failure_type, FailureType.CORRECT)
+        self.assertTrue(is_correct)
+        self.assertTrue(format_compliant)
+
+    def test_tagged_yes_lowercase_is_correct_and_compliant_after_normalization(self):
+        response = canned_response("Reasoning...\n<answer>Yes</answer>")
+        failure_type, extracted, is_correct, format_compliant = classify_result(
+            response=response, exception=None, canonical_answer="YES",
+            source="bbh_causal_judgement", stage="reason",
+        )
+        self.assertEqual(failure_type, FailureType.CORRECT)
         self.assertTrue(is_correct)
         self.assertTrue(format_compliant)
 
