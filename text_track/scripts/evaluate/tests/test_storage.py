@@ -13,13 +13,14 @@ import tempfile
 import unittest
 from unittest import mock
 
-from ..storage import ResultRecord, ResumeIndex, make_resume_key, write_run_manifest
+from ..storage import EVALUATOR_VERSION, ResultRecord, ResumeIndex, make_resume_key, write_run_manifest
 
 
 def _make_record(**overrides):
     defaults = dict(
         run_id="run-1", dataset_version="dataset_conference_v1.1",
-        protocol_version="protocol_v2", item_id="gsm8k_0", source="gsm8k",
+        protocol_version="protocol_v2", evaluator_version=EVALUATOR_VERSION,
+        item_id="gsm8k_0", source="gsm8k",
         model_key="claude_sonnet_4_6", config_fingerprint="abc123",
         condition_key="A_EE", stage="reason",
         prompt_version="v2", original_input="q", generated_translation=None,
@@ -48,12 +49,21 @@ class ResumeKeyTests(unittest.TestCase):
         key_b = _make_record(config_fingerprint="fp-b").resume_key()
         self.assertNotEqual(key_a, key_b)
 
+    def test_resume_key_includes_evaluator_version(self):
+        # Regression: a grading/tokenization fix (e.g. the answer-only detection bug) can
+        # change what a record's fields mean without touching prompts/protocol at all, so
+        # evaluator_version alone must distinguish two otherwise-identical records.
+        key_a = _make_record(evaluator_version="evaluator_v1").resume_key()
+        key_b = _make_record(evaluator_version="evaluator_v2").resume_key()
+        self.assertNotEqual(key_a, key_b)
+
     def test_make_resume_key_matches_instance_method(self):
         record = _make_record()
         via_instance = record.resume_key()
         via_function = make_resume_key(
             dataset_version=record.dataset_version, protocol_version=record.protocol_version,
-            prompt_version=record.prompt_version, config_fingerprint=record.config_fingerprint,
+            prompt_version=record.prompt_version, evaluator_version=record.evaluator_version,
+            config_fingerprint=record.config_fingerprint,
             item_id=record.item_id, model_key=record.model_key,
             condition_key=record.condition_key, stage=record.stage,
         )
@@ -97,7 +107,8 @@ class ResumeIndexLenientLoadingTests(unittest.TestCase):
         # v2 lookup (which always has an actual fingerprint string).
         v2_key = make_resume_key(
             dataset_version="dataset_conference_v1.1", protocol_version="protocol_v2",
-            prompt_version="v2", config_fingerprint="real-fingerprint-hash",
+            prompt_version="v2", evaluator_version=EVALUATOR_VERSION,
+            config_fingerprint="real-fingerprint-hash",
             item_id="gsm8k_0", model_key="qwen_3_6_27b", condition_key="A_EE", stage="reason",
         )
         self.assertFalse(index.is_complete(v2_key))

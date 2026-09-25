@@ -12,12 +12,24 @@ from dataclasses import asdict, dataclass, field
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "eval_runs")
 
+# Bump whenever grading/tokenization/extraction logic changes in a way that would make an
+# old record's fields mean something different from what a fresh run would produce today —
+# even if dataset/protocol/prompt/model config all stayed the same. This is deliberately
+# separate from PROTOCOL_VERSION (conditions.py): a grading or tokenization fix (e.g. the
+# answer-only detection fix, or the rationale-token stripping change) doesn't touch prompts
+# at all, so it wouldn't otherwise bump protocol_version/prompt_version — without this,
+# cross-run resumption (a fresh run_id reusing another run's completed work via
+# ResumeIndex) could silently treat an old-semantics record as equivalent to a
+# new-semantics one.
+EVALUATOR_VERSION = "evaluator_v1"
+
 
 @dataclass
 class ResultRecord:
     run_id: str
     dataset_version: str
     protocol_version: str
+    evaluator_version: str
     item_id: str
     source: str
     model_key: str
@@ -54,7 +66,8 @@ class ResultRecord:
     def resume_key(self) -> tuple:
         return make_resume_key(
             dataset_version=self.dataset_version, protocol_version=self.protocol_version,
-            prompt_version=self.prompt_version, config_fingerprint=self.config_fingerprint,
+            prompt_version=self.prompt_version, evaluator_version=self.evaluator_version,
+            config_fingerprint=self.config_fingerprint,
             item_id=self.item_id, model_key=self.model_key, condition_key=self.condition_key,
             stage=self.stage,
         )
@@ -62,7 +75,8 @@ class ResultRecord:
 
 def make_resume_key(
     *, dataset_version: str, protocol_version: str, prompt_version: str,
-    config_fingerprint: str, item_id: str, model_key: str, condition_key: str, stage: str,
+    evaluator_version: str, config_fingerprint: str, item_id: str, model_key: str,
+    condition_key: str, stage: str,
 ) -> tuple:
     """Single source of truth for the resume-key shape, used both by ResultRecord.resume_key()
     and by run.py's lookups BEFORE a record exists — keeping both in sync is the whole point
@@ -70,14 +84,16 @@ def make_resume_key(
     drifted out of sync when prompt_version was added to one but not the other).
 
     Includes prompt_version so a prompt-wording change (even under the same protocol_version)
-    can't accidentally resume/reuse a stale result, and config_fingerprint so a changed model
+    can't accidentally resume/reuse a stale result, config_fingerprint so a changed model
     configuration (different checkpoint, precision, sampling settings, serving config) can't
-    either. In practice prompt_version changes are expected to ship alongside a
-    protocol_version bump (see conditions.PROTOCOL_VERSION), but this doesn't rely on that
-    discipline.
+    either, and evaluator_version so a grading/tokenization/extraction change that doesn't
+    touch prompts at all (e.g. a bug fix to answer-only detection) can't be silently
+    resumed-over by a fresh run_id reusing an older run's completed work either. In practice
+    prompt_version changes are expected to ship alongside a protocol_version bump (see
+    conditions.PROTOCOL_VERSION), but this doesn't rely on that discipline.
     """
-    return (dataset_version, protocol_version, prompt_version, config_fingerprint, item_id,
-            model_key, condition_key, stage)
+    return (dataset_version, protocol_version, prompt_version, evaluator_version,
+            config_fingerprint, item_id, model_key, condition_key, stage)
 
 
 NON_RETRYABLE_FAILURE_TYPES = {
@@ -200,8 +216,8 @@ def _git_commit() -> str | None:
 # selects a different item set for the same run_id would silently mix two different
 # experiments' data into one result file.
 _MANIFEST_COMPATIBILITY_FIELDS = (
-    "dataset_version", "protocol_version", "conditions", "models", "model_settings",
-    "git_commit", "planned_item_ids_by_condition",
+    "dataset_version", "protocol_version", "evaluator_version", "conditions", "models",
+    "model_settings", "git_commit", "planned_item_ids_by_condition",
 )
 
 
@@ -240,6 +256,7 @@ def write_run_manifest(
 
     new_values = {
         "dataset_version": dataset_version, "protocol_version": protocol_version,
+        "evaluator_version": EVALUATOR_VERSION,
         "conditions": conditions, "models": models, "model_settings": model_settings or {},
         "git_commit": _git_commit(),
         "planned_item_ids_by_condition": planned_item_ids_by_condition or {},

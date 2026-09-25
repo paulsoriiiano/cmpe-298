@@ -43,16 +43,35 @@ def count_tokens_tiktoken(text: str | None) -> int:
     return len(_get_tiktoken_encoding().encode(text))
 
 
-def _resolve_hpc_tokenizer_source(config) -> tuple[str, str]:
+class UnresolvedTokenizerRevisionError(RuntimeError):
+    """Raised when an HPC model's tokenizer revision would resolve to the mutable "main"
+    branch instead of an immutable, reproducible reference."""
+
+
+def _resolve_hpc_tokenizer_source(config, *, require_pinned_revision: bool = True) -> tuple[str, str]:
     """Single source of truth for which tokenizer repo/revision an HPC model's native
     tokenizer is loaded from — used by both _load_native_tokenizer() and
     tokenizer_identity(), so the reported identity always matches what was actually loaded
     (the same class of bug as the resume-key drift: never compute the same fact twice in
     two places that can drift apart).
 
-    Precedence: HPC_TOKENIZER_REPO env var > HPC_HF_REPO env var > config.tokenizer_repo >
-    config.hf_repo > config.model_id. Revision: HPC_TOKENIZER_REVISION env var >
-    config.revision > "main".
+    Precedence:
+      source:   HPC_TOKENIZER_REPO env var > HPC_HF_REPO env var > config.tokenizer_repo >
+                config.hf_repo > config.model_id.
+      revision: HPC_TOKENIZER_REVISION env var > HPC_CHECKPOINT_COMMIT_SHA env var >
+                HPC_MODEL_REVISION env var > config.revision > "main".
+
+    HPC_CHECKPOINT_COMMIT_SHA/HPC_MODEL_REVISION are checked here (not just
+    HPC_TOKENIZER_REVISION) because in practice the tokenizer ships alongside the model
+    checkpoint in the same repo/revision — if an operator has already pinned the model's
+    checkpoint commit or revision, that pin should apply to the tokenizer too unless a
+    tokenizer-specific override is given.
+
+    require_pinned_revision (default True) rejects a resolution that falls all the way
+    through to the "main" default with UnresolvedTokenizerRevisionError — "main" is a
+    mutable branch, not a reproducible reference, and silently tokenizing against whatever
+    "main" happens to contain today would make the tokenization-tax measurement
+    unreproducible without anyone noticing.
     """
     source = (
         os.environ.get("HPC_TOKENIZER_REPO")
@@ -61,7 +80,21 @@ def _resolve_hpc_tokenizer_source(config) -> tuple[str, str]:
         or config.hf_repo
         or config.model_id
     )
-    revision = os.environ.get("HPC_TOKENIZER_REVISION") or config.revision or "main"
+    revision = (
+        os.environ.get("HPC_TOKENIZER_REVISION")
+        or os.environ.get("HPC_CHECKPOINT_COMMIT_SHA")
+        or os.environ.get("HPC_MODEL_REVISION")
+        or config.revision
+        or "main"
+    )
+    if require_pinned_revision and revision == "main":
+        raise UnresolvedTokenizerRevisionError(
+            f"No pinned tokenizer revision resolved for source {source!r} — refusing to "
+            f"fall back to the mutable 'main' branch. Set one of HPC_TOKENIZER_REVISION, "
+            f"HPC_CHECKPOINT_COMMIT_SHA, or HPC_MODEL_REVISION to an immutable commit SHA "
+            f"so the tokenizer (and the tokenization-tax numbers it produces) can be "
+            f"reproduced exactly."
+        )
     return source, revision
 
 
@@ -100,7 +133,8 @@ def _load_native_tokenizer(model_key: str):
 def tokenizer_identity(model_key: str) -> tuple[str, str]:
     """Returns (tokenizer_model_id, tokenizer_revision) for whichever tokenizer is actually
     used to count tokens for this model_key. Raises for an HPC model whose native tokenizer
-    can't load — see _load_native_tokenizer()."""
+    can't load, or whose revision can't be pinned to something other than "main" — see
+    _load_native_tokenizer() / _resolve_hpc_tokenizer_source()."""
     config = MODEL_REGISTRY[model_key]
     if config.provider == "hpc":
         _load_native_tokenizer(model_key)  # raises if unavailable; populates the cache

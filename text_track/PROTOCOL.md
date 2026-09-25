@@ -219,30 +219,41 @@ unreproducible-from-current-scripts for the record.
 ## 8. Resumption and reproducibility metadata
 
 **Resume key**: `ResultRecord`'s resume key (`storage.make_resume_key()`) is
-`(dataset_version, protocol_version, prompt_version, config_fingerprint,
-item_id, model_key, condition_key, stage)`. `config_fingerprint`
-(`models.config_fingerprint()`) is a short hash of everything that
-determines a model's actual behavior — checkpoint, precision, sampling
-settings, serving config, tokenizer revision — so a changed model
-configuration (a different vLLM precision, an updated checkpoint) can never
-be silently treated as equivalent to an older run's results, the same way
-`prompt_version`/`protocol_version` protect against a prompt-wording change
-being silently reused.
+`(dataset_version, protocol_version, prompt_version, evaluator_version,
+config_fingerprint, item_id, model_key, condition_key, stage)`.
+`config_fingerprint` (`models.config_fingerprint()`) is a short hash of
+everything that determines a model's actual behavior — checkpoint,
+precision, sampling settings, serving config, tokenizer revision — so a
+changed model configuration (a different vLLM precision, an updated
+checkpoint) can never be silently treated as equivalent to an older run's
+results, the same way `prompt_version`/`protocol_version` protect against a
+prompt-wording change being silently reused. `evaluator_version`
+(`storage.EVALUATOR_VERSION`, currently `"evaluator_v1"`) exists as a
+**separate** axis from `protocol_version`/`prompt_version`: a grading or
+tokenization fix (e.g. the answer-only detection fix, or the
+rationale-token stripping change) doesn't touch prompts at all and wouldn't
+otherwise bump those — without `evaluator_version` in the key, a fresh
+`run_id` could silently reuse another run's completed work via
+`ResumeIndex` even though the two runs' evaluator code disagreed on what a
+record's fields mean. Bump `EVALUATOR_VERSION` whenever grading/tokenization/
+extraction logic changes in a way that would change what a record means,
+even if dataset/protocol/prompt/model config all stay the same.
 
 **Older result files can't crash a run**: `ResumeIndex.load_from_runs_dir()`
 tolerates JSONL rows from an older schema (e.g. a `protocol_v1` file missing
 fields this revision added) by filling missing fields with `None` rather
 than raising — such rows simply never match a current lookup key (different
-`protocol_version`/`config_fingerprint`), so old data is cleanly ignored,
-not fatal. A corrupt/truncated line is skipped the same way.
+`protocol_version`/`evaluator_version`/`config_fingerprint`), so old data is
+cleanly ignored, not fatal. A corrupt/truncated line is skipped the same way.
 
 **Stable run IDs**: `run_evaluation(..., run_id=...)` / the CLI's `--run-id`
 accept a predetermined ID (e.g. one assigned per SLURM job). Restarting a
 failed job under the *same* `--run-id` appends to the same result JSONL
 rather than starting a new file. `write_run_manifest()` refuses to overwrite
 an existing manifest for that `run_id` if the new invocation's
-`dataset_version`/`protocol_version`/`conditions`/`models`/`model_settings`/
-`git_commit`/`planned_item_ids_by_condition` don't all match exactly —
+`dataset_version`/`protocol_version`/`evaluator_version`/`conditions`/
+`models`/`model_settings`/`git_commit`/`planned_item_ids_by_condition` don't
+all match exactly —
 raising `ValueError` rather than silently applying different settings (or a
 different evaluator code version, or a different item selection) to a
 run_id that already has results under the old ones. On a compatible
@@ -295,14 +306,25 @@ determines real context usage and cost for those models. **A failed
 native-tokenizer load for an HPC model is fatal** (raises immediately,
 stopping the run) rather than silently falling back to tiktoken — a silent
 fallback would produce a tokenization-tax number that looks valid but isn't
-measuring the actual model's tokenizer. Repo/revision resolution precedence:
+measuring the actual model's tokenizer. Repo resolution precedence:
 `HPC_TOKENIZER_REPO` env var → `HPC_HF_REPO` env var →
-`config.tokenizer_repo` → `config.hf_repo` → `config.model_id`; revision:
-`HPC_TOKENIZER_REVISION` env var → `config.revision` → `"main"`. For
-non-HPC providers (Anthropic, OpenAI, gated repos), `tiktoken` `cl100k_base`
-is the only option and is used as a clearly-labeled fallback approximation.
-Which tokenizer was actually used is always recorded via
-`tokenizer_model_id`/`tokenizer_revision`. `word_count`/`char_count` are
+`config.tokenizer_repo` → `config.hf_repo` → `config.model_id`. Revision
+resolution precedence: `HPC_TOKENIZER_REVISION` env var →
+`HPC_CHECKPOINT_COMMIT_SHA` env var → `HPC_MODEL_REVISION` env var →
+`config.revision` → `"main"` — the checkpoint/model-revision env vars are
+checked here (not just the tokenizer-specific one) because in practice the
+tokenizer ships alongside the model checkpoint in the same repo/revision.
+**A resolution that falls all the way through to `"main"` is rejected**
+(`tokenization.UnresolvedTokenizerRevisionError`, an HPC-only check) —
+`"main"` is a mutable branch, not a reproducible reference, so an HPC run
+must have at least one of the three revision env vars set. The resolved
+repo/revision are recorded both per-record (`tokenizer_model_id`/
+`tokenizer_revision`) and directly in the manifest's `model_settings`
+(`resolved_tokenizer_model_id`/`resolved_tokenizer_revision`) — not only
+indirectly via `config_fingerprint`'s opaque hash. For non-HPC providers
+(Anthropic, OpenAI, gated repos), `tiktoken` `cl100k_base` is the only
+option and is used as a clearly-labeled fallback approximation (no pinned
+revision requirement applies there). `word_count`/`char_count` are
 supplementary descriptive stats only — not a substitute for either
 token-count figure. `input_tokens`/`output_tokens` (each provider's own
 exact `usage` figures, for the *complete* response) remain the

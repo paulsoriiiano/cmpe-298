@@ -12,7 +12,10 @@ from . import grading
 from . import tokenization
 from .conditions import STRATIFIED_SUBSET_CONDITIONS, get_condition, require_implemented
 from .models import MODEL_REGISTRY, complete_with_retry, config_fingerprint, manifest_settings_for
-from .storage import RUNS_DIR, ResultRecord, ResumeIndex, RunWriter, make_resume_key, write_run_manifest
+from .storage import (
+    EVALUATOR_VERSION, RUNS_DIR, ResultRecord, ResumeIndex, RunWriter, make_resume_key,
+    write_run_manifest,
+)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATASET_PATH = os.path.join(SCRIPT_DIR, "..", "..", "data", "dataset.jsonl")
@@ -72,7 +75,8 @@ def _run_single_call_condition(
     """A_EE / A_II: one call, question -> rationale -> canonical answer."""
     key = make_resume_key(
         dataset_version=dataset_version, protocol_version=protocol_version,
-        prompt_version=condition.prompt_version, config_fingerprint=config_fp,
+        prompt_version=condition.prompt_version, evaluator_version=EVALUATOR_VERSION,
+        config_fingerprint=config_fp,
         item_id=item["id"], model_key=model_key, condition_key=condition.key, stage="reason",
     )
     if resume_index.is_complete(key):
@@ -100,6 +104,7 @@ def _run_single_call_condition(
     descriptive = tokenization.descriptive_counts(response.text if response else None)
     record = ResultRecord(
         run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
+        evaluator_version=EVALUATOR_VERSION,
         item_id=item["id"], source=item["source"], model_key=model_key,
         config_fingerprint=config_fp,
         condition_key=condition.key, stage="reason", prompt_version=condition.prompt_version,
@@ -129,7 +134,8 @@ def _run_direct_condition(
     over the fixed 300-item stratified subset (see STRATIFIED_SUBSET_CONDITIONS)."""
     key = make_resume_key(
         dataset_version=dataset_version, protocol_version=protocol_version,
-        prompt_version=condition.prompt_version, config_fingerprint=config_fp,
+        prompt_version=condition.prompt_version, evaluator_version=EVALUATOR_VERSION,
+        config_fingerprint=config_fp,
         item_id=item["id"], model_key=model_key, condition_key=condition.key, stage="direct",
     )
     if resume_index.is_complete(key):
@@ -156,6 +162,7 @@ def _run_direct_condition(
     descriptive = tokenization.descriptive_counts(response.text if response else None)
     record = ResultRecord(
         run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
+        evaluator_version=EVALUATOR_VERSION,
         item_id=item["id"], source=item["source"], model_key=model_key,
         config_fingerprint=config_fp,
         condition_key=condition.key, stage="direct", prompt_version=condition.prompt_version,
@@ -185,12 +192,14 @@ def _run_staged_pivot_condition(
     reasoning-stage prompt."""
     translate_key = make_resume_key(
         dataset_version=dataset_version, protocol_version=protocol_version,
-        prompt_version=condition.prompt_version, config_fingerprint=config_fp,
+        prompt_version=condition.prompt_version, evaluator_version=EVALUATOR_VERSION,
+        config_fingerprint=config_fp,
         item_id=item["id"], model_key=model_key, condition_key=condition.key, stage="translate",
     )
     reason_key = make_resume_key(
         dataset_version=dataset_version, protocol_version=protocol_version,
-        prompt_version=condition.prompt_version, config_fingerprint=config_fp,
+        prompt_version=condition.prompt_version, evaluator_version=EVALUATOR_VERSION,
+        config_fingerprint=config_fp,
         item_id=item["id"], model_key=model_key, condition_key=condition.key, stage="reason",
     )
 
@@ -216,6 +225,7 @@ def _run_staged_pivot_condition(
         descriptive = tokenization.descriptive_counts(response.text if response else None)
         translate_record = ResultRecord(
             run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
+            evaluator_version=EVALUATOR_VERSION,
             item_id=item["id"], source=item["source"], model_key=model_key,
             config_fingerprint=config_fp,
             condition_key=condition.key, stage="translate", prompt_version=condition.prompt_version,
@@ -266,6 +276,7 @@ def _run_staged_pivot_condition(
     descriptive = tokenization.descriptive_counts(response.text if response else None)
     reason_record = ResultRecord(
         run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
+        evaluator_version=EVALUATOR_VERSION,
         item_id=item["id"], source=item["source"], model_key=model_key,
         config_fingerprint=config_fp,
         condition_key=condition.key, stage="reason", prompt_version=condition.prompt_version,
@@ -319,10 +330,15 @@ def run_evaluation(
     dataset_version = load_dataset_version(manifest_path)
     protocol_version = cond_mod.PROTOCOL_VERSION
 
-    # One fingerprint per model, computed once (native-tokenizer loading is cached), reused
-    # for every record and resume-key lookup for that model in this run.
+    # One tokenizer identity + fingerprint per model, computed once (native-tokenizer
+    # loading is cached), reused for every record and resume-key lookup for that model in
+    # this run. Resolving tokenizer_identity once here (rather than only inside individual
+    # ResultRecords) also lets the resolved repo/revision be written directly into the
+    # manifest's model_settings below, instead of being visible only indirectly via the
+    # opaque config_fingerprint hash or scattered across every record.
+    tokenizer_identities = {key: tokenization.tokenizer_identity(key) for key in model_keys}
     config_fingerprints = {
-        key: config_fingerprint(key, tokenizer_revision=tokenization.tokenizer_identity(key)[1])
+        key: config_fingerprint(key, tokenizer_revision=tokenizer_identities[key][1])
         for key in model_keys
     }
 
@@ -361,6 +377,7 @@ def run_evaluation(
                     key = make_resume_key(
                         dataset_version=dataset_version, protocol_version=protocol_version,
                         prompt_version=condition.prompt_version,
+                        evaluator_version=EVALUATOR_VERSION,
                         config_fingerprint=config_fingerprints[model_key],
                         item_id=item["id"], model_key=model_key, condition_key=condition.key,
                         stage=stage,
@@ -375,7 +392,12 @@ def run_evaluation(
         conditions=condition_keys, models=model_keys, total_planned_units=total_planned_units,
         planned_item_ids_by_condition={k: [item["id"] for item in item_pools[k]] for k in condition_keys},
         model_settings={
-            key: {**manifest_settings_for(key), "config_fingerprint": config_fingerprints[key]}
+            key: {
+                **manifest_settings_for(key),
+                "config_fingerprint": config_fingerprints[key],
+                "resolved_tokenizer_model_id": tokenizer_identities[key][0],
+                "resolved_tokenizer_revision": tokenizer_identities[key][1],
+            }
             for key in model_keys
         },
         resuming_from_run_ids=sorted(resuming_from_run_ids),

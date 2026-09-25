@@ -100,7 +100,7 @@ class NativeHpcTokenizerTests(unittest.TestCase):
 
     def test_falls_back_to_hpc_hf_repo_when_tokenizer_repo_absent(self):
         os.environ.pop("HPC_TOKENIZER_REPO", None)
-        with mock.patch.dict(os.environ, {"HPC_HF_REPO": "my-org/hf-repo"}), \
+        with mock.patch.dict(os.environ, {"HPC_HF_REPO": "my-org/hf-repo", "HPC_TOKENIZER_REVISION": "pinned"}), \
              mock.patch("tokenizers.Tokenizer.from_pretrained") as mock_from_pretrained:
             mock_from_pretrained.return_value = self._mock_tokenizer()
             count_tokens_for_model("hello", HPC_MODEL_KEY)
@@ -108,25 +108,60 @@ class NativeHpcTokenizerTests(unittest.TestCase):
             self.assertEqual(called_source, "my-org/hf-repo")
 
     def test_encode_called_with_add_special_tokens_false(self):
-        with mock.patch("tokenizers.Tokenizer.from_pretrained") as mock_from_pretrained:
+        with mock.patch.dict(os.environ, {"HPC_TOKENIZER_REVISION": "pinned"}), \
+             mock.patch("tokenizers.Tokenizer.from_pretrained") as mock_from_pretrained:
             mock_tokenizer = self._mock_tokenizer(num_tokens=1)
             mock_from_pretrained.return_value = mock_tokenizer
             count_tokens_for_model("hi", HPC_MODEL_KEY)
             mock_tokenizer.encode.assert_called_once_with("hi", add_special_tokens=False)
 
     def test_hpc_tokenizer_load_failure_is_fatal(self):
-        with mock.patch(
-            "tokenizers.Tokenizer.from_pretrained", side_effect=OSError("network unreachable"),
-        ):
+        with mock.patch.dict(os.environ, {"HPC_TOKENIZER_REVISION": "pinned"}), \
+             mock.patch("tokenizers.Tokenizer.from_pretrained", side_effect=OSError("network unreachable")):
             with self.assertRaises(RuntimeError):
                 count_tokens_for_model("hi", HPC_MODEL_KEY)
 
     def test_hpc_tokenizer_load_failure_stops_tokenizer_identity_too(self):
-        with mock.patch(
-            "tokenizers.Tokenizer.from_pretrained", side_effect=OSError("network unreachable"),
-        ):
+        with mock.patch.dict(os.environ, {"HPC_TOKENIZER_REVISION": "pinned"}), \
+             mock.patch("tokenizers.Tokenizer.from_pretrained", side_effect=OSError("network unreachable")):
             with self.assertRaises(RuntimeError):
                 tokenizer_identity(HPC_MODEL_KEY)
+
+    def test_revision_precedence_tokenizer_revision_wins(self):
+        env = {
+            "HPC_TOKENIZER_REVISION": "from-tokenizer-revision",
+            "HPC_CHECKPOINT_COMMIT_SHA": "from-checkpoint-sha",
+            "HPC_MODEL_REVISION": "from-model-revision",
+        }
+        with mock.patch.dict(os.environ, env), \
+             mock.patch("tokenizers.Tokenizer.from_pretrained") as mock_from_pretrained:
+            mock_from_pretrained.return_value = self._mock_tokenizer()
+            count_tokens_for_model("hello", HPC_MODEL_KEY)
+            self.assertEqual(mock_from_pretrained.call_args.kwargs["revision"], "from-tokenizer-revision")
+
+    def test_revision_precedence_checkpoint_sha_used_when_tokenizer_revision_absent(self):
+        os.environ.pop("HPC_TOKENIZER_REVISION", None)
+        env = {"HPC_CHECKPOINT_COMMIT_SHA": "from-checkpoint-sha", "HPC_MODEL_REVISION": "from-model-revision"}
+        with mock.patch.dict(os.environ, env), \
+             mock.patch("tokenizers.Tokenizer.from_pretrained") as mock_from_pretrained:
+            mock_from_pretrained.return_value = self._mock_tokenizer()
+            count_tokens_for_model("hello", HPC_MODEL_KEY)
+            self.assertEqual(mock_from_pretrained.call_args.kwargs["revision"], "from-checkpoint-sha")
+
+    def test_revision_precedence_model_revision_used_when_others_absent(self):
+        os.environ.pop("HPC_TOKENIZER_REVISION", None)
+        os.environ.pop("HPC_CHECKPOINT_COMMIT_SHA", None)
+        with mock.patch.dict(os.environ, {"HPC_MODEL_REVISION": "from-model-revision"}), \
+             mock.patch("tokenizers.Tokenizer.from_pretrained") as mock_from_pretrained:
+            mock_from_pretrained.return_value = self._mock_tokenizer()
+            count_tokens_for_model("hello", HPC_MODEL_KEY)
+            self.assertEqual(mock_from_pretrained.call_args.kwargs["revision"], "from-model-revision")
+
+    def test_unresolved_main_revision_is_rejected(self):
+        for var in ("HPC_TOKENIZER_REVISION", "HPC_CHECKPOINT_COMMIT_SHA", "HPC_MODEL_REVISION"):
+            os.environ.pop(var, None)
+        with self.assertRaises(tokenization.UnresolvedTokenizerRevisionError):
+            count_tokens_for_model("hello", HPC_MODEL_KEY)
 
 
 class DescriptiveCountsTests(unittest.TestCase):
