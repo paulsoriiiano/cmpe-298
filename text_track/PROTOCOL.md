@@ -1,32 +1,33 @@
 # Experimental Protocol
 
 - Protocol version: `protocol_v1`
-- Date: 2026-09-23
+- Date: 2026-09-23 (implementation status updated 2026-09-24)
 - Pinned dataset version: `dataset_conference_v1.1` (see `data/dataset_manifest.json`)
-- **STATUS: not yet piloted. No model calls have been made under this protocol.**
+- **STATUS: implemented in `text_track/scripts/evaluate/`, not yet piloted. No real
+  model API calls have been made under this protocol (only fake-client tests).**
 
 ## 1. Conditions
 
-| Condition | Input | Steps | Calls | Maps to |
+| Condition | Input | Steps | Calls | Status |
 |---|---|---|---|---|
-| `A_EE` (primary) | `question_en` | question → English rationale → canonical answer | 1 | `evaluate.py`'s `pass1_english_baseline` |
-| `A_II` (primary) | `question_ilo` | question → Ilokano rationale → canonical answer | 1 | `evaluate.py`'s `pass2_native_ilokano` |
-| `A_IE` (primary, pivot) | `question_ilo` | Ilokano→English translation (separate call, saved) → **new/fresh context** → English rationale using *only* the saved translation → canonical answer | 2 | **needs refactor** — see gap below |
-| `A_EI` (secondary) | `question_en` | English→Ilokano translation (separate call, saved) → **new/fresh context** → Ilokano rationale using only the saved translation → canonical answer | 2 | needs new pass |
-| `A_E0` (optional control) | `question_en` | question → canonical answer, no rationale | 1 | needs new pass |
-| `A_I0` (optional control) | `question_ilo` | question → canonical answer, no rationale | 1 | needs new pass |
+| `A_EE` (primary) | `question_en` | question → English rationale → canonical answer | 1 | implemented |
+| `A_II` (primary) | `question_ilo` | question → Ilokano rationale → canonical answer | 1 | implemented |
+| `A_IE` (primary, pivot) | `question_ilo` | Ilokano→English translation (separate call, saved) → **new/fresh context** → English rationale using *only* the saved translation → canonical answer | 2 | implemented |
+| `A_EI` (secondary) | `question_en` | English→Ilokano translation (separate call, saved) → **new/fresh context** → Ilokano rationale using only the saved translation → canonical answer | 2 | implemented |
+| `A_E0` (control) | `question_en` | question → canonical answer, no rationale | 1 | implemented (stratified 300-item subset only) |
+| `A_I0` (control) | `question_ilo` | question → canonical answer, no rationale | 1 | implemented (stratified 300-item subset only) |
 
-`A_EE`/`A_II`/`A_IE` are the minimum publishable experiment. `A_EI` is
-secondary and, along with `A_E0`/`A_I0`, is the first thing cut if the
-schedule slips.
+`A_EE`/`A_II`/`A_IE` are the minimum publishable experiment. `A_EI` and
+`A_E0`/`A_I0` are lower priority and, per the schedule, are the first things
+cut if time runs out during full execution — but all six are implemented in
+the evaluator, so nothing is blocked on further coding to run any of them.
 
-**Design gap (must be fixed in the Phase 3 evaluator refactor, not assumed
-away):** the current `pass3_english_pivot` (`PASS3_SYSTEM` in `evaluate.py`)
-does translate-then-solve as **one continuous prompt/response**. The
-protocol requires `A_IE` (and `A_EI`) to be **two separate model calls**,
-with the reasoning call started in a fresh context that only sees the saved
-translation — not the original-language question. This is not yet
-implemented anywhere in the repo.
+`A_IE`/`A_EI` are implemented as **two separate model calls** in
+`run.py`'s `_run_staged_pivot_condition()`: a translation call whose output
+is saved as its own `ResultRecord` before the reasoning call starts, and a
+reasoning call in a fresh context (no shared message history) that receives
+only the saved translation — never the original-language question or the
+canonical answer.
 
 ### `A_E0`/`A_I0` sampling
 
@@ -47,7 +48,8 @@ exactly the same 300 IDs regardless of machine or Python version:
 | **Total** | **1000** | **300** |
 
 Verified: the generated subset matches this table exactly (see script
-output). Every model must receive exactly the same selected IDs.
+output). `run.py` restricts `A_E0`/`A_I0` to these 300 IDs automatically;
+every other condition still runs over the full 1,000.
 
 ## 2. Canonical answer format per source
 
@@ -67,9 +69,9 @@ Note BBH logical deduction's range is `A`–`E` (5-way), while MMLU's is
 `A`–`D` (4-way) — same letter convention, different option counts.
 
 Every `canonical_answer` value in the frozen dataset was validated against
-`evaluate.py`'s own `parse_expected_answer()`/`normalize_answer()` before
-being written — see `text_track/scripts/add_canonical_answer.py`. Validation
-passed for all 1,000 items with zero failures.
+`normalize_answer()` (now in `text_track/scripts/evaluate/grading.py`)
+before being written — see `text_track/scripts/add_canonical_answer.py`.
+Validation passed for all 1,000 items with zero failures.
 
 ## 3. Output schema
 
@@ -86,31 +88,40 @@ Grading must record two separate axes, per the conference plan:
   `<answer>` tag containing (after normalization) exactly the canonical
   token, with no extra content.
 
-`evaluate.py` currently only returns a single `is_correct` boolean and does
-not separate these two axes — adding a `format_ok` field alongside
-`is_correct` is a scoped requirement for **Phase 3 (evaluator refactor)**,
-not implemented here.
+This is implemented via `text_track/scripts/evaluate/storage.py`'s
+`ResultRecord`, which records `is_correct` and `format_compliant` as
+separate fields (`grading.classify_result()` derives both from the same
+failure-type classification — see `grading.FailureType`).
 
 ## 4. Prompts
 
-Current prompts in `evaluate.py` (`PASS1_SYSTEM`, `PASS2_SYSTEM`,
-`PASS3_SYSTEM`, `_ANSWER_RULE`) are labeled `prompt_v0`. New prompts needed
-for `A_IE`'s two-call redesign, `A_EI`, `A_E0`, and `A_I0` will be drafted in
-Phase 3/4 and labeled `prompt_v1`+. Prompt text is not finalized in this
-document; once drafted, prompts should live alongside the other pass
-prompts in `evaluate.py` (or a dedicated prompts module if the refactor
-warrants it), with each semantic change bumping the version number.
+Prompts live in `text_track/scripts/evaluate/conditions.py`, versioned
+`prompt_v1` (the `ConditionConfig.prompt_version` field, recorded on every
+`ResultRecord`). This covers the single-call reasoning prompts (`A_EE`/`A_II`),
+the direct-answer prompts (`A_E0`/`A_I0`), and the staged-pivot
+translation/reasoning prompts (`A_IE`/`A_EI`) — including the
+translation-only prompts, which explicitly instruct the model not to solve
+the problem. Any future wording change should bump this to `prompt_v2` and
+note what changed.
 
-## 5. Model settings (placeholder)
+## 5. Model settings
 
-| Model | Temperature | Max tokens | Thinking mode | Provider |
-|---|---|---|---|---|
-| `claude-sonnet-4-6` | 0.0 | 2048 | off | Anthropic |
-| `meta-llama/Meta-Llama-3-8B-Instruct` | 0.0 | 2048 | n/a | HF router |
+| Model key | Model ID | Temperature | Max tokens | Provider | Status |
+|---|---|---|---|---|---|
+| `claude_sonnet_4_6` | `claude-sonnet-4-6` | 0.0 | 2048 | Anthropic | ready |
+| `llama_3_8b` | `meta-llama/Meta-Llama-3-8B-Instruct` | 0.0 | 2048 | HF router | ready |
+| `gpt_5_2_thinking` | `gpt-5.2-thinking` | n/a (reasoning model) | 2048 | OpenAI direct API | ready |
+| `qwen_3_6_27b` | `qwen3.6-27b` | 0.0 | 2048 | HPC via vLLM | **blocked** — model weights still being staged on HPC; endpoint not yet configured (`HPC_VLLM_BASE_URL`) |
+| `qwen_sealion_v4_5_27b_it` | `qwen-sealion-v4.5-27b-it` | 0.0 | 2048 | HPC via vLLM | **blocked**, same reason |
 
-These are the values currently hard-coded in `evaluate.py` and are inherited
-defaults, not yet ratified as the paper's final experimental settings. Final
-model roster and settings are decided in **Phase 4 (pilot)**.
+The three non-HPC models are implemented and callable today (`text_track/scripts/evaluate/models.py`).
+The two Qwen models reuse the same OpenAI-compatible client code path (vLLM's
+server is OpenAI-compatible) but need `HPC_VLLM_BASE_URL` set once the vLLM
+server is actually running with the model weights loaded — until then,
+selecting them raises a clear `RuntimeError` rather than silently failing.
+Final settings (including whether GPT-5.2 Thinking needs a `reasoning_effort`
+parameter once its actual API surface is confirmed) are still subject to
+revision during **Phase 4 (pilot)**.
 
 ## 6. Statistical comparisons
 
@@ -145,11 +156,14 @@ addressed by this protocol or by `add_canonical_answer.py`:
 Neither gap is fabricated a resolution here; both are stated as
 unreproducible-from-current-scripts for the record.
 
-## 8. Non-goals for this phase
+## 8. Non-goals (still deferred)
 
-- Does **not** refactor `evaluate.py`'s grading/parsing/prompt logic
-  (Phase 3).
-- Does **not** run any pilot or full experiment under any condition
-  (Phase 4).
-- Does **not** modify `analyze.py`.
+- Does **not** run any pilot or full experiment under any condition against
+  real APIs — that's **Phase 4**. Everything above is implemented and
+  tested against a fake model client only (zero real API calls made so far).
+- Does **not** modify `analyze.py` — its rewrite for the new per-item×model×
+  condition×stage result schema is a separate, later phase.
 - Does **not** attempt to resolve the provenance gaps in section 7.
+- Does **not** implement the actual HPC/vLLM deployment for the Qwen
+  models — only the client code path, gated on `HPC_VLLM_BASE_URL` being
+  set once the server is running.

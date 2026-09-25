@@ -4,12 +4,13 @@ canonical_answer is a single, language-agnostic, format-normalized final
 answer per item (see text_track/PROTOCOL.md section 2 for the derivation
 rules and rationale). answer_en / answer_ilo are left untouched.
 
-Validates every derived value against evaluate.py's own parse_expected_answer
-and normalize_answer before writing anything, so canonical_answer is provably
-consistent with the current grading logic.
+Validates every derived value against normalize_answer() (now living in the evaluate/
+package's grading module) before writing anything, so canonical_answer is provably
+consistent with the grading logic.
 """
 import json
 import os
+import re
 import shutil
 import sys
 
@@ -18,7 +19,17 @@ DATA_DIR = os.path.join(SCRIPT_DIR, "..", "data")
 DATASET_PATH = os.path.join(DATA_DIR, "dataset.jsonl")
 
 sys.path.insert(0, SCRIPT_DIR)
-from evaluate import parse_expected_answer, normalize_answer  # noqa: E402
+from evaluate.grading import normalize_answer  # noqa: E402
+
+
+def parse_expected_answer(answer_text):
+    """GSM8K answers end with '#### <value>'; other sources are already the bare final
+    value. Kept here (rather than imported) since the refactored evaluator no longer needs
+    this — dataset.jsonl's canonical_answer is precomputed and authoritative."""
+    match = re.search(r'####\s*(.+)', answer_text)
+    if match:
+        return match.group(1).strip()
+    return answer_text.strip()
 
 # Ilokano <-> English tokens that are semantically equivalent but not
 # string-equal, so normalize_answer() alone can't relate them.
