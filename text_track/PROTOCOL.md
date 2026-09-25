@@ -30,8 +30,12 @@ implemented anywhere in the repo.
 
 ### `A_E0`/`A_I0` sampling
 
-Run on a stratified 300-item subset, proportional to each source's share of
-the full 1,000 (30% of each, rounded):
+Run on a fixed, deterministically-sampled 300-item subset, proportional to
+each source's share of the full 1,000 (30% of each, rounded). Generated once
+by `text_track/scripts/generate_stratified_subset.py` (seed 42) into the
+static artifact `text_track/data/stratified_subset_300.json` — not
+resampled at run time, so every model call against these conditions uses
+exactly the same 300 IDs regardless of machine or Python version:
 
 | Source | Full count | Subset (30%) |
 |---|---|---|
@@ -42,7 +46,8 @@ the full 1,000 (30% of each, rounded):
 | mmlu_formal_logic | 126 | 38 |
 | **Total** | **1000** | **300** |
 
-Every model must receive exactly the same selected IDs.
+Verified: the generated subset matches this table exactly (see script
+output). Every model must receive exactly the same selected IDs.
 
 ## 2. Canonical answer format per source
 
