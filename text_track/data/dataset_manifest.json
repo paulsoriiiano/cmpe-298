@@ -1,0 +1,18 @@
+{
+  "version": "dataset_conference_v1.1",
+  "previous_version": "dataset_conference_v1",
+  "file": "dataset.jsonl",
+  "sha256": "984a32211eaeeeeba5dd5cead39ccc0a3747d09f37ebcf9b2a6f3436f560c303",
+  "last_dataset_change_commit": null,
+  "git_tag": "dataset_conference_v1.1",
+  "item_count": 1000,
+  "source_counts": {
+    "gsm8k": 400,
+    "bbh_logical_deduction": 250,
+    "bbh_causal_judgement": 50,
+    "mmlu_conceptual_physics": 174,
+    "mmlu_formal_logic": 126
+  },
+  "schema": ["id", "source", "question_en", "answer_en", "question_ilo", "answer_ilo", "canonical_answer"],
+  "notes": "v1.1: added canonical_answer field (format-normalized, language-agnostic final answer per item: bare integer for GSM8K, bare letter A-E for BBH logical deduction, YES/NO for BBH causal judgement, bare letter A-D for MMLU). answer_en/answer_ilo are unchanged. Derivation rules and validation in text_track/PROTOCOL.md section 2; migration script is text_track/scripts/add_canonical_answer.py, which validated every derived value against evaluate.py's own parse_expected_answer/normalize_answer before writing. Neither v1 nor v1.1 has been git-tagged yet as of this writing; last_dataset_change_commit will be filled in once committed."
+}

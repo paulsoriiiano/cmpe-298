@@ -20,7 +20,7 @@ This project evaluates the text reasoning and speech recognition capabilities of
 | MMLU Conceptual Physics | 174 | Multiple-choice physics |
 | MMLU Formal Logic | 126 | Multiple-choice logic |
 
-English questions were machine-translated to Ilokano using Claude Sonnet 4.5 (`collect_dataset.py`).
+English questions were machine-translated to Ilokano using Claude Sonnet 4.5 (`translate.py`), then linguistically audited (280-item random sample, see `data/audit_summary.md`) and manually corrected. `dataset.jsonl` is frozen at version `dataset_conference_v1` (see `data/dataset_manifest.json`).
 
 ### 3-Pass Evaluation Protocol
 
@@ -47,17 +47,17 @@ Both differences are statistically significant (McNemar's exact test, p < 0.05).
 
 ```
 text_track/scripts/
-├── collect_dataset.py   # Pull from HuggingFace + translate with GPT-4o
-├── translate.py         # Translation utilities
+├── collect_dataset.py   # Legacy/superseded: pulls from HuggingFace (GPT-4o translation path unused)
+├── translate.py         # Translates questions/answers to Ilokano with Claude — produced dataset.jsonl
 ├── evaluate.py          # Run 3-pass evaluation (Claude + Llama via HF router)
 ├── analyze.py           # Compute deltas, McNemar's test, write analysis.md
 └── convert.py           # Format conversion utilities
 ```
 
-Run the pipeline in order:
+`data/dataset.jsonl` is frozen (version `dataset_conference_v1`) and should not be
+regenerated. To reproduce evaluation on the frozen dataset:
 
 ```bash
-python text_track/scripts/collect_dataset.py   # builds data/dataset.jsonl
 python text_track/scripts/evaluate.py          # writes data/evaluation_results_3pass.jsonl
 python text_track/scripts/analyze.py           # writes data/analysis.md
 ```
