@@ -161,22 +161,40 @@ def extract_fallback_answer(text: str | None, source: str | None) -> str | None:
 
 _ANSWER_TAG_RE = re.compile(r'<answer>.*?</answer>', re.IGNORECASE | re.DOTALL)
 
+# Strips the WHOLE "final answer is X" clause, including any leading words back to the start
+# of the sentence/string (e.g. "The final answer is 109." -> ""), unlike _FINAL_ANSWER_RE
+# above (which only captures from "final answer" onward, for extraction purposes — leaving
+# "The" behind was exactly the bug this separate stripping-only pattern fixes: a naive
+# per-match removal left leading filler words like "The" as a false-positive "explanation").
+_FINAL_ANSWER_SENTENCE_RE = re.compile(
+    r'[^.\n]*\bfinal answer\b[^.\n]*[.!]?', re.IGNORECASE
+)
+
+# A remainder consisting of ONLY a standalone option letter or yes/no/wen/saan token (with
+# optional surrounding parens/punctuation) is still answer-only, even with no <answer> tag,
+# \boxed{}, or "final answer" phrase at all.
+_STANDALONE_ANSWER_RE = re.compile(r'^\(?(?:[A-E]|YES|NO|Wen|Saan)\)?[.!]?$', re.IGNORECASE)
+
 
 def strip_answer_content(text: str | None) -> str:
     """Remove the answer tag and known fallback-answer forms (\\boxed{...}, a "final answer
-    is X" sentence) from a response, leaving whatever text remains. Used to check whether a
-    response actually contains an explanation, as opposed to only an answer — a naive
-    `bool(generated_rationale)` check is wrong here: <answer>109</answer> is nonempty but is
-    exactly the answer-only behavior a rationale-presence check needs to catch."""
+    is X" sentence, or a standalone option letter / yes-no-wen-saan token) from a response,
+    leaving whatever text remains. Used to check whether a response actually contains an
+    explanation, as opposed to only an answer — a naive `bool(generated_rationale)` check is
+    wrong here: <answer>109</answer> is nonempty but is exactly the answer-only behavior a
+    rationale-presence check needs to catch."""
     if not text:
         return ""
     remainder = _ANSWER_TAG_RE.sub("", text)
     remainder = _BOXED_RE.sub("", remainder)
-    remainder = _FINAL_ANSWER_RE.sub("", remainder)
+    remainder = _FINAL_ANSWER_SENTENCE_RE.sub("", remainder)
     # Leftover LaTeX display-math delimiters ($$...$$) around a now-removed \boxed{...}
     # aren't meaningful text on their own.
     remainder = remainder.replace("$$", "").replace("$", "")
-    return remainder.strip()
+    remainder = remainder.strip()
+    if _STANDALONE_ANSWER_RE.match(remainder):
+        return ""
+    return remainder
 
 
 def has_text_beyond_answer(text: str | None) -> bool:

@@ -1,16 +1,20 @@
-"""Unit tests for tokenization.py. Native (HPC) tokenizer loading needs network access to
-the HF Hub, so these tests force the tiktoken fallback path (via a non-HPC model_key) rather
-than depending on real network calls — the native-vs-fallback selection logic itself
-(_load_native_tokenizer returning None for non-"hpc" providers) is exercised directly.
+"""Unit tests for tokenization.py. Loading a REAL native tokenizer needs network access to
+the HF Hub, so most tests here either force the tiktoken fallback path (via a non-HPC
+model_key) or mock tokenizers.Tokenizer.from_pretrained for the HPC-provider code path —
+no test in this file makes a real network call.
 """
+import os
 import unittest
+from unittest import mock
 
+from .. import tokenization
 from ..tokenization import (
     TIKTOKEN_ENCODING, count_stage_tokens, count_tokens_for_model, count_tokens_tiktoken,
     descriptive_counts, tokenizer_identity,
 )
 
 NON_HPC_MODEL_KEY = "claude_sonnet_4_6"  # never attempts native tokenizer loading
+HPC_MODEL_KEY = "qwen_3_6_27b"
 
 
 class TiktokenFallbackTests(unittest.TestCase):
@@ -69,6 +73,60 @@ class StageTokenCountsTests(unittest.TestCase):
         )
         self.assertEqual(result["tokenizer_model_id"], f"tiktoken/{TIKTOKEN_ENCODING}")
         self.assertIsInstance(result["tokenizer_revision"], str)
+
+
+class NativeHpcTokenizerTests(unittest.TestCase):
+    """Mocks tokenizers.Tokenizer.from_pretrained — no real network calls. Covers the fatal-
+    on-failure behavior and correct source/revision/add_special_tokens plumbing for HPC
+    models, per PROTOCOL.md section 8: a silent tiktoken fallback for an HPC model would
+    corrupt the tokenization-tax measurement without anyone noticing."""
+
+    def setUp(self):
+        tokenization._native_tokenizer_cache.clear()
+        self.addCleanup(tokenization._native_tokenizer_cache.clear)
+
+    def _mock_tokenizer(self, num_tokens=3):
+        mock_tokenizer = mock.Mock()
+        mock_tokenizer.encode.return_value = mock.Mock(ids=list(range(num_tokens)))
+        return mock_tokenizer
+
+    def test_from_pretrained_called_with_repo_and_revision_env_overrides(self):
+        env = {"HPC_TOKENIZER_REPO": "my-org/my-tokenizer", "HPC_TOKENIZER_REVISION": "deadbeef"}
+        with mock.patch.dict(os.environ, env), \
+             mock.patch("tokenizers.Tokenizer.from_pretrained") as mock_from_pretrained:
+            mock_from_pretrained.return_value = self._mock_tokenizer()
+            count_tokens_for_model("hello", HPC_MODEL_KEY)
+            mock_from_pretrained.assert_called_once_with("my-org/my-tokenizer", revision="deadbeef")
+
+    def test_falls_back_to_hpc_hf_repo_when_tokenizer_repo_absent(self):
+        os.environ.pop("HPC_TOKENIZER_REPO", None)
+        with mock.patch.dict(os.environ, {"HPC_HF_REPO": "my-org/hf-repo"}), \
+             mock.patch("tokenizers.Tokenizer.from_pretrained") as mock_from_pretrained:
+            mock_from_pretrained.return_value = self._mock_tokenizer()
+            count_tokens_for_model("hello", HPC_MODEL_KEY)
+            called_source = mock_from_pretrained.call_args.args[0]
+            self.assertEqual(called_source, "my-org/hf-repo")
+
+    def test_encode_called_with_add_special_tokens_false(self):
+        with mock.patch("tokenizers.Tokenizer.from_pretrained") as mock_from_pretrained:
+            mock_tokenizer = self._mock_tokenizer(num_tokens=1)
+            mock_from_pretrained.return_value = mock_tokenizer
+            count_tokens_for_model("hi", HPC_MODEL_KEY)
+            mock_tokenizer.encode.assert_called_once_with("hi", add_special_tokens=False)
+
+    def test_hpc_tokenizer_load_failure_is_fatal(self):
+        with mock.patch(
+            "tokenizers.Tokenizer.from_pretrained", side_effect=OSError("network unreachable"),
+        ):
+            with self.assertRaises(RuntimeError):
+                count_tokens_for_model("hi", HPC_MODEL_KEY)
+
+    def test_hpc_tokenizer_load_failure_stops_tokenizer_identity_too(self):
+        with mock.patch(
+            "tokenizers.Tokenizer.from_pretrained", side_effect=OSError("network unreachable"),
+        ):
+            with self.assertRaises(RuntimeError):
+                tokenizer_identity(HPC_MODEL_KEY)
 
 
 class DescriptiveCountsTests(unittest.TestCase):

@@ -241,12 +241,16 @@ accept a predetermined ID (e.g. one assigned per SLURM job). Restarting a
 failed job under the *same* `--run-id` appends to the same result JSONL
 rather than starting a new file. `write_run_manifest()` refuses to overwrite
 an existing manifest for that `run_id` if the new invocation's
-`dataset_version`/`protocol_version`/`conditions`/`models`/`model_settings`
-don't match exactly — raising `ValueError` rather than silently applying
-different settings to a run_id that already has results under the old ones.
-When a run reuses another run's completed work (any `run_id` found in
-`ResumeIndex`, not just its own), those source `run_id`s are recorded in the
-manifest's `resuming_from_run_ids`.
+`dataset_version`/`protocol_version`/`conditions`/`models`/`model_settings`/
+`git_commit`/`planned_item_ids_by_condition` don't all match exactly —
+raising `ValueError` rather than silently applying different settings (or a
+different evaluator code version, or a different item selection) to a
+run_id that already has results under the old ones. On a compatible
+restart, the manifest's original `created_at` is preserved and
+`last_resumed_at` is updated to the restart time — so it's always clear
+when a run_id's results span more than one invocation. When a run reuses
+another run's completed work (any `run_id` found in `ResumeIndex`, not just
+its own), those source `run_id`s are recorded in `resuming_from_run_ids`.
 
 **Run manifest** (`storage.write_run_manifest()`, written before any API
 calls): also records `git_commit` (the evaluator's own commit hash at run
@@ -272,18 +276,37 @@ parsed into their proper types, not left as raw strings.
 available on every dataset item regardless of condition), plus
 `translation_tokens`/`rationale_tokens` when this record actually produced
 one, and `tokenization_tax_ratio` (`question_ilo_tokens /
-question_en_tokens`). For HPC-served models, these are **model-native**
-counts (loaded via the `tokenizers` library from the model's own
-`tokenizer.json` on the HF Hub) — the primary figures for the
-tokenization-tax claim, since that's what actually determines real context
-usage and cost for those models. Where no native tokenizer is loadable
-(Anthropic, OpenAI, a gated repo, or no network access), `tiktoken`
-`cl100k_base` is used as a clearly-labeled fallback approximation. Which one
-was actually used is always recorded via `tokenizer_model_id`/
-`tokenizer_revision`. `word_count`/`char_count` are supplementary
-descriptive stats only — not a substitute for either token-count figure.
-`input_tokens`/`output_tokens` (each provider's own exact `usage` figures)
-remain the authoritative totals for cost accounting.
+question_en_tokens`). `rationale_tokens` counts the explanation **with the
+answer tag/fallback stripped out** (`grading.strip_answer_content()`) — not
+the complete response — so a mostly-answer-tag response with one filler
+word isn't counted as a full rationale's worth of tokens;
+`input_tokens`/`output_tokens` (below) remain the exact counts for the
+*complete* response, unaffected by this stripping. `rationale_tokens` is
+always `None` for `A_E0`/`A_I0` (direct-answer controls have no rationale
+by design, so nothing is tokenized as one even if a model adds unsolicited
+explanatory text anyway).
+
+For HPC-served models, token counts are **model-native** (loaded via the
+`tokenizers` library from the model's own `tokenizer.json` on the HF Hub,
+with `add_special_tokens=False` since we're counting the content itself,
+not a ready-to-run sequence with BOS/EOS/role markers) — the primary
+figures for the tokenization-tax claim, since that's what actually
+determines real context usage and cost for those models. **A failed
+native-tokenizer load for an HPC model is fatal** (raises immediately,
+stopping the run) rather than silently falling back to tiktoken — a silent
+fallback would produce a tokenization-tax number that looks valid but isn't
+measuring the actual model's tokenizer. Repo/revision resolution precedence:
+`HPC_TOKENIZER_REPO` env var → `HPC_HF_REPO` env var →
+`config.tokenizer_repo` → `config.hf_repo` → `config.model_id`; revision:
+`HPC_TOKENIZER_REVISION` env var → `config.revision` → `"main"`. For
+non-HPC providers (Anthropic, OpenAI, gated repos), `tiktoken` `cl100k_base`
+is the only option and is used as a clearly-labeled fallback approximation.
+Which tokenizer was actually used is always recorded via
+`tokenizer_model_id`/`tokenizer_revision`. `word_count`/`char_count` are
+supplementary descriptive stats only — not a substitute for either
+token-count figure. `input_tokens`/`output_tokens` (each provider's own
+exact `usage` figures, for the *complete* response) remain the
+authoritative totals for cost accounting.
 
 ## 9. Manipulation / post-run annotation checks
 
@@ -298,12 +321,17 @@ completed run's result file and writes
 `(run_id, item_id, model_key, condition_key, stage)`, with:
 
 - Derived automatically (not a judgment call): `has_text_beyond_answer`
-  (`grading.has_text_beyond_answer()` — strips the answer tag and known
-  fallback-answer forms like `\boxed{...}` before checking for any
-  remaining word characters, so an answer-only response like
-  `<answer>109</answer>` correctly reads `False`) and `requested_language`
-  (`None` for `A_E0`/`A_I0` — direct-answer controls have a language-neutral
-  canonical answer and no rationale, so no rationale-language judgment
+  (`grading.has_text_beyond_answer()` — strips the answer tag, known
+  fallback-answer forms (`\boxed{...}`, a full "the final answer is X"
+  sentence including its leading words), and a standalone option letter or
+  YES/NO/Wen/Saan token, before checking for any remaining word characters,
+  so answer-only responses like `<answer>109</answer>`, `"The final answer
+  is 109."`, or a bare `"(A)"` all correctly read `False` — a real
+  explanation that happens to start with "Yes," is not affected, since the
+  standalone-token strip only applies when that token is the *entire*
+  remainder) and `requested_language` (`None` for `A_E0`/`A_I0` —
+  direct-answer controls have a language-neutral canonical answer and no
+  rationale, so no rationale-language judgment
   applies to them).
 - Left blank for a human annotator: `rationale_present` (deliberately
   **not** auto-derived — `has_text_beyond_answer` is a hint, not a

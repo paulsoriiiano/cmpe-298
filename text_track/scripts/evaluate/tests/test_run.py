@@ -73,6 +73,11 @@ class RunEvaluationDryRunTests(unittest.TestCase):
                 self.assertIsNone(record["is_correct"])
             if record["stage"] in ("direct", "reason"):
                 self.assertIsNotNone(record["canonical_answer"])
+            if record["stage"] == "direct":
+                # A_E0/A_I0 have no rationale by design — rationale_tokens must be None
+                # even though the fake responder's text ("Reasoning steps...") would yield
+                # a nonzero count if it were (wrongly) tokenized as a rationale.
+                self.assertIsNone(record["rationale_tokens"])
 
         self.assertEqual(seen_conditions, set(IMPLEMENTED_CONDITIONS))
 

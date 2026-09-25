@@ -192,10 +192,16 @@ def _git_commit() -> str | None:
 
 
 # Manifest fields that must match exactly if a run_id is reused (e.g. restarting a failed
-# SLURM job under the same predetermined run_id) — anything else (timestamps, planned-unit
-# counts derived from a possibly-different item selection) is allowed to differ.
+# SLURM job under the same predetermined run_id) — anything else (total_planned_units,
+# resuming_from_run_ids) is allowed to differ. git_commit is included: resuming the same
+# run_id from a different evaluator commit could mean different prompts/grading/tokenization
+# code produced the "same" result schema, which is exactly the kind of silent drift this
+# manifest exists to catch. planned_item_ids_by_condition is included: a restart that
+# selects a different item set for the same run_id would silently mix two different
+# experiments' data into one result file.
 _MANIFEST_COMPATIBILITY_FIELDS = (
     "dataset_version", "protocol_version", "conditions", "models", "model_settings",
+    "git_commit", "planned_item_ids_by_condition",
 )
 
 
@@ -222,9 +228,10 @@ def write_run_manifest(
 
     If a manifest already exists for this run_id (e.g. restarting a failed SLURM job under
     the same predetermined run_id — see __main__.py's --run-id), its dataset/protocol
-    version, conditions, models, and model_settings must match exactly, or this raises
-    rather than silently overwriting a manifest that no longer describes what's actually in
-    the result JSONL for that run_id.
+    version, conditions, models, model_settings, git_commit, and item selection must match
+    exactly, or this raises rather than silently overwriting a manifest that no longer
+    describes what's actually in the result JSONL for that run_id. On a compatible restart,
+    the original created_at is preserved and last_resumed_at is set to now.
     """
     import datetime
 
@@ -234,7 +241,12 @@ def write_run_manifest(
     new_values = {
         "dataset_version": dataset_version, "protocol_version": protocol_version,
         "conditions": conditions, "models": models, "model_settings": model_settings or {},
+        "git_commit": _git_commit(),
+        "planned_item_ids_by_condition": planned_item_ids_by_condition or {},
     }
+
+    created_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    last_resumed_at = None
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
             existing = json.load(f)
@@ -250,14 +262,15 @@ def write_run_manifest(
                 f"(existing vs. new): {mismatches}. Use a new run_id for a genuinely "
                 f"different configuration."
             )
+        created_at = existing["created_at"]  # preserve the ORIGINAL creation time
+        last_resumed_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     manifest = {
         "run_id": run_id,
-        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "git_commit": _git_commit(),
+        "created_at": created_at,
+        "last_resumed_at": last_resumed_at,
         **new_values,
         "total_planned_units": total_planned_units,
-        "planned_item_ids_by_condition": planned_item_ids_by_condition or {},
         "resuming_from_run_ids": resuming_from_run_ids or [],
     }
     with open(path, "w", encoding="utf-8") as f:

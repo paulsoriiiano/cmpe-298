@@ -11,6 +11,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 from ..storage import ResultRecord, ResumeIndex, make_resume_key, write_run_manifest
 
@@ -169,6 +170,57 @@ class RunManifestTests(unittest.TestCase):
                 protocol_version="protocol_v2", conditions=["A_EE", "A_II"],  # different!
                 models=["claude_sonnet_4_6"], total_planned_units=2, runs_dir=self.tmp_dir,
             )
+
+    def test_same_run_id_different_item_selection_raises(self):
+        write_run_manifest(
+            run_id="run-1", dataset_version="dataset_conference_v1.1",
+            protocol_version="protocol_v2", conditions=["A_EE"],
+            models=["claude_sonnet_4_6"], total_planned_units=1,
+            planned_item_ids_by_condition={"A_EE": ["gsm8k_0"]}, runs_dir=self.tmp_dir,
+        )
+        with self.assertRaises(ValueError):
+            write_run_manifest(
+                run_id="run-1", dataset_version="dataset_conference_v1.1",
+                protocol_version="protocol_v2", conditions=["A_EE"],
+                models=["claude_sonnet_4_6"], total_planned_units=1,
+                planned_item_ids_by_condition={"A_EE": ["gsm8k_1"]},  # different item set!
+                runs_dir=self.tmp_dir,
+            )
+
+    def test_same_run_id_different_git_commit_raises(self):
+        from .. import storage
+        with mock.patch.object(storage, "_git_commit", return_value="commit-a"):
+            write_run_manifest(
+                run_id="run-1", dataset_version="dataset_conference_v1.1",
+                protocol_version="protocol_v2", conditions=["A_EE"],
+                models=["claude_sonnet_4_6"], total_planned_units=1, runs_dir=self.tmp_dir,
+            )
+        with mock.patch.object(storage, "_git_commit", return_value="commit-b"):
+            with self.assertRaises(ValueError):
+                write_run_manifest(
+                    run_id="run-1", dataset_version="dataset_conference_v1.1",
+                    protocol_version="protocol_v2", conditions=["A_EE"],
+                    models=["claude_sonnet_4_6"], total_planned_units=1, runs_dir=self.tmp_dir,
+                )
+
+    def test_created_at_preserved_and_last_resumed_at_set_on_restart(self):
+        from .. import storage
+        with mock.patch.object(storage, "_git_commit", return_value="fixed-commit"):
+            kwargs = dict(
+                run_id="run-1", dataset_version="dataset_conference_v1.1",
+                protocol_version="protocol_v2", conditions=["A_EE"],
+                models=["claude_sonnet_4_6"], total_planned_units=1, runs_dir=self.tmp_dir,
+            )
+            path = write_run_manifest(**kwargs)
+            with open(path) as f:
+                first = json.load(f)
+            self.assertIsNone(first["last_resumed_at"])
+
+            path = write_run_manifest(**kwargs)
+            with open(path) as f:
+                second = json.load(f)
+            self.assertEqual(second["created_at"], first["created_at"])
+            self.assertIsNotNone(second["last_resumed_at"])
 
 
 if __name__ == "__main__":

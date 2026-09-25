@@ -6,9 +6,13 @@ is gated and may not be loadable without auth).
 
 Native counts are what actually determines real context usage and cost for the HPC models,
 so they're the primary figures recorded (question_en_tokens, question_ilo_tokens,
-translation_tokens, rationale_tokens, tokenization_tax_ratio). tiktoken is kept only as an
-optional, clearly-labeled reference measurement for providers with no native tokenizer
-available — see tokenizer_identity(), which reports which one was actually used.
+translation_tokens, rationale_tokens, tokenization_tax_ratio). For HPC models specifically,
+a failed native-tokenizer load is FATAL (raises immediately) rather than silently falling
+back to tiktoken — a silent fallback would produce a tokenization-tax number that looks
+valid but isn't measuring the actual model's tokenizer, which is the entire point of this
+module for those models. tiktoken is only ever a fallback for providers with no native
+tokenizer available at all (Anthropic, OpenAI) — see tokenizer_identity(), which reports
+which one was actually used.
 
 Provider-reported input_tokens/output_tokens (already on ModelResponse) remain the exact,
 authoritative figures for cost accounting; nothing here overrides those.
@@ -39,27 +43,55 @@ def count_tokens_tiktoken(text: str | None) -> int:
     return len(_get_tiktoken_encoding().encode(text))
 
 
+def _resolve_hpc_tokenizer_source(config) -> tuple[str, str]:
+    """Single source of truth for which tokenizer repo/revision an HPC model's native
+    tokenizer is loaded from — used by both _load_native_tokenizer() and
+    tokenizer_identity(), so the reported identity always matches what was actually loaded
+    (the same class of bug as the resume-key drift: never compute the same fact twice in
+    two places that can drift apart).
+
+    Precedence: HPC_TOKENIZER_REPO env var > HPC_HF_REPO env var > config.tokenizer_repo >
+    config.hf_repo > config.model_id. Revision: HPC_TOKENIZER_REVISION env var >
+    config.revision > "main".
+    """
+    source = (
+        os.environ.get("HPC_TOKENIZER_REPO")
+        or os.environ.get("HPC_HF_REPO")
+        or config.tokenizer_repo
+        or config.hf_repo
+        or config.model_id
+    )
+    revision = os.environ.get("HPC_TOKENIZER_REVISION") or config.revision or "main"
+    return source, revision
+
+
 def _load_native_tokenizer(model_key: str):
-    """Best-effort: load the model's own tokenizer via the `tokenizers` library. Returns
-    None (falls back to tiktoken) if unavailable — no network access, gated repo, or a
-    provider with no public tokenizer file at all (Anthropic, OpenAI)."""
+    """Loads the model's own tokenizer via the `tokenizers` library. Returns None (falls
+    back to tiktoken) for non-HPC providers, which have no public tokenizer file to load in
+    the first place (Anthropic, OpenAI). For HPC providers, a load failure is FATAL — raises
+    RuntimeError immediately rather than silently returning None, since a silent tiktoken
+    fallback for an HPC model would corrupt the tokenization-tax measurement without anyone
+    noticing."""
     if model_key in _native_tokenizer_cache:
         return _native_tokenizer_cache[model_key]
 
     config = MODEL_REGISTRY[model_key]
-    tokenizer = None
-    if config.provider == "hpc":
-        source = (
-            os.environ.get("HPC_TOKENIZER_REPO")
-            or config.tokenizer_repo
-            or config.hf_repo
-            or config.model_id
-        )
-        try:
-            from tokenizers import Tokenizer
-            tokenizer = Tokenizer.from_pretrained(source)
-        except Exception:  # noqa: BLE001 - network/auth/missing-file — fall back to tiktoken
-            tokenizer = None
+    if config.provider != "hpc":
+        _native_tokenizer_cache[model_key] = None
+        return None
+
+    source, revision = _resolve_hpc_tokenizer_source(config)
+    from tokenizers import Tokenizer
+    try:
+        tokenizer = Tokenizer.from_pretrained(source, revision=revision)
+    except Exception as e:  # noqa: BLE001 - re-raised as a clear, actionable RuntimeError
+        raise RuntimeError(
+            f"Failed to load the native tokenizer for {model_key!r} "
+            f"(source={source!r}, revision={revision!r}): {type(e).__name__}: {e}. "
+            f"This is fatal for HPC models — set HPC_TOKENIZER_REPO/HPC_HF_REPO/"
+            f"HPC_TOKENIZER_REVISION in .env, or fix network/auth access, rather than "
+            f"silently falling back to an approximate tokenizer for a local model."
+        ) from e
 
     _native_tokenizer_cache[model_key] = tokenizer
     return tokenizer
@@ -67,24 +99,25 @@ def _load_native_tokenizer(model_key: str):
 
 def tokenizer_identity(model_key: str) -> tuple[str, str]:
     """Returns (tokenizer_model_id, tokenizer_revision) for whichever tokenizer is actually
-    used to count tokens for this model_key."""
-    tokenizer = _load_native_tokenizer(model_key)
-    if tokenizer is not None:
-        config = MODEL_REGISTRY[model_key]
-        revision = os.environ.get("HPC_TOKENIZER_REVISION") or config.revision or "unknown"
-        tokenizer_id = os.environ.get("HPC_TOKENIZER_REPO") or config.tokenizer_repo or config.hf_repo or config.model_id
-        return tokenizer_id, revision
+    used to count tokens for this model_key. Raises for an HPC model whose native tokenizer
+    can't load — see _load_native_tokenizer()."""
+    config = MODEL_REGISTRY[model_key]
+    if config.provider == "hpc":
+        _load_native_tokenizer(model_key)  # raises if unavailable; populates the cache
+        return _resolve_hpc_tokenizer_source(config)
     return f"tiktoken/{TIKTOKEN_ENCODING}", tiktoken.__version__
 
 
 def count_tokens_for_model(text: str | None, model_key: str) -> int:
-    """Model-native count where a native tokenizer loaded successfully, else the tiktoken
-    approximation. Check tokenizer_identity(model_key) to know which was actually used."""
+    """Model-native count where a native tokenizer is required (HPC providers — raises if
+    unavailable), else the tiktoken approximation. Special tokens are excluded
+    (add_special_tokens=False) since we're counting the content itself, not a
+    ready-to-run-through-the-model sequence with BOS/EOS/role markers added."""
     if not text:
         return 0
     tokenizer = _load_native_tokenizer(model_key)
     if tokenizer is not None:
-        return len(tokenizer.encode(text).ids)
+        return len(tokenizer.encode(text, add_special_tokens=False).ids)
     return count_tokens_tiktoken(text)
 
 
@@ -96,7 +129,8 @@ def count_stage_tokens(
     are always available on every dataset item, regardless of which condition is running) so
     the "tokenization tax" of Ilokano vs. English can be compared across every record, not
     just pivot conditions. translation/rationale are counted only when actually produced for
-    this record (None otherwise)."""
+    this record (None otherwise) — callers are responsible for passing rationale=None for
+    direct-answer conditions (A_E0/A_I0), which have no rationale by design."""
     tokenizer_model_id, tokenizer_revision = tokenizer_identity(model_key)
 
     question_en_tokens = count_tokens_for_model(question_en, model_key)

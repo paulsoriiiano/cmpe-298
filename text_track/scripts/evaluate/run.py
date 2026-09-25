@@ -88,9 +88,14 @@ def _run_single_call_condition(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="reason",
     )
+    # rationale_tokens counts the explanation ONLY (the answer tag/fallback stripped out),
+    # not the complete response — a response that's mostly an answer tag with a one-word
+    # "explanation" shouldn't be counted as having a full rationale's worth of tokens.
+    # output_tokens (below, from the provider's own usage) remains the exact count for the
+    # complete response, unaffected by this stripping.
+    rationale_for_tokens = grading.strip_answer_content(response.text) if response else None
     token_fields = _token_fields(
-        model_key=model_key, item=item, translation=None,
-        rationale=response.text if response else None,
+        model_key=model_key, item=item, translation=None, rationale=rationale_for_tokens,
     )
     descriptive = tokenization.descriptive_counts(response.text if response else None)
     record = ResultRecord(
@@ -140,11 +145,13 @@ def _run_direct_condition(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="direct",
     )
-    # Direct-answer controls have no rationale by design; still tokenize the raw response
-    # under "rationale" so an unexpected explanation the model added anyway isn't invisible.
+    # Direct-answer controls have no rationale by design, so rationale_tokens is always None
+    # here — not the response's token count. If the model adds unexpected explanatory text
+    # anyway, that's visible in raw_response/format_compliant, not conflated into a
+    # rationale-token figure that should mean "the rationale conditions produced this much
+    # explanation."
     token_fields = _token_fields(
-        model_key=model_key, item=item, translation=None,
-        rationale=response.text if response else None,
+        model_key=model_key, item=item, translation=None, rationale=None,
     )
     descriptive = tokenization.descriptive_counts(response.text if response else None)
     record = ResultRecord(
@@ -219,7 +226,7 @@ def _run_staged_pivot_condition(
             failure_type=failure_type.value,
             input_tokens=response.input_tokens if response else None,
             output_tokens=response.output_tokens if response else None,
-                **token_fields, **descriptive,
+            **token_fields, **descriptive,
             finish_reason=response.finish_reason if response else None,
             latency_ms=latency_ms, retry_count=retry_count,
             error_message=str(exception) if exception else None, timestamp=_now_iso(),
@@ -250,9 +257,11 @@ def _run_staged_pivot_condition(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="reason",
     )
+    # See the single-call condition above: rationale_tokens counts the explanation only,
+    # with the answer tag/fallback stripped out.
+    rationale_for_tokens = grading.strip_answer_content(response.text) if response else None
     token_fields = _token_fields(
-        model_key=model_key, item=item, translation=None,
-        rationale=response.text if response else None,
+        model_key=model_key, item=item, translation=None, rationale=rationale_for_tokens,
     )
     descriptive = tokenization.descriptive_counts(response.text if response else None)
     reason_record = ResultRecord(

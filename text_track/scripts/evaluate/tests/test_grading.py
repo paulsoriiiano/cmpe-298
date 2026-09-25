@@ -284,6 +284,36 @@ class RationalePresenceHeuristicTests(unittest.TestCase):
         text = "Reasoning here.\n$$\\boxed{109}$$\n<answer>109</answer>"
         self.assertEqual(strip_answer_content(text), "Reasoning here.")
 
+    def test_final_answer_sentence_with_leading_article_is_answer_only(self):
+        # Regression: "The final answer is 109." used to leave "The" behind as a false
+        # positive "explanation" because only the "final answer is X" phrase itself (not
+        # the leading article) was being stripped.
+        self.assertFalse(has_text_beyond_answer("The final answer is 109."))
+        self.assertEqual(strip_answer_content("The final answer is 109."), "")
+
+    def test_final_answer_sentence_after_real_work_still_has_text(self):
+        text = "Let x=9. The final answer is 109."
+        self.assertTrue(has_text_beyond_answer(text))
+        self.assertEqual(strip_answer_content(text), "Let x=9.")
+
+    def test_standalone_option_letter_is_answer_only(self):
+        self.assertFalse(has_text_beyond_answer("(A)"))
+        self.assertFalse(has_text_beyond_answer("A"))
+
+    def test_standalone_yes_no_is_answer_only(self):
+        self.assertFalse(has_text_beyond_answer("YES"))
+        self.assertFalse(has_text_beyond_answer("NO."))
+
+    def test_standalone_wen_saan_is_answer_only(self):
+        self.assertFalse(has_text_beyond_answer("Wen"))
+        self.assertFalse(has_text_beyond_answer("Saan."))
+
+    def test_yes_within_a_real_explanation_still_has_text(self):
+        # "Yes" is only stripped when it's the ENTIRE remainder, not whenever the word
+        # appears — a real explanation that happens to start with "Yes," must not be erased.
+        text = "Yes, because the causal chain holds.\n<answer>Yes</answer>"
+        self.assertTrue(has_text_beyond_answer(text))
+
 
 if __name__ == "__main__":
     unittest.main()
