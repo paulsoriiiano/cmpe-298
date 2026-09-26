@@ -125,6 +125,12 @@ class OpenAICompatibleClient:
         )
         if config.supports_temperature:
             kwargs["temperature"] = config.temperature
+        if config.provider == "hpc":
+            kwargs["extra_body"] = {
+                "chat_template_kwargs": {
+                    "enable_thinking": False,
+                }
+            }
         response = client.chat.completions.create(**kwargs)
         choice = response.choices[0]
         usage = getattr(response, "usage", None)

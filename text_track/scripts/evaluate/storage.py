@@ -21,7 +21,7 @@ RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "eval_runs")
 # cross-run resumption (a fresh run_id reusing another run's completed work via
 # ResumeIndex) could silently treat an old-semantics record as equivalent to a
 # new-semantics one.
-EVALUATOR_VERSION = "evaluator_v1"
+EVALUATOR_VERSION = "evaluator_v2"
 
 
 @dataclass
