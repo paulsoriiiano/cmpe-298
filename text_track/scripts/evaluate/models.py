@@ -23,7 +23,12 @@ class ModelConfig:
     supports_temperature: bool = True   # reasoning models often reject a non-default temperature
     max_output_tokens: int = 2048
     seed: int | None = None
+    # Our own retry loop in complete_with_retry() drives off this (backoff = 2 * 2**attempt
+    # seconds, i.e. 2, 4, 8, ... for the default 3) — NOT the SDK's own retry mechanism,
+    # which is disabled (max_retries=0) at client construction so there's exactly one retry
+    # policy in effect, not two stacked on top of each other with independent backoff.
     max_retries: int = 3
+    request_timeout_seconds: float = 300.0
     # Reproducibility metadata for the run manifest (see storage.write_run_manifest) and the
     # resumption config fingerprint (see config_fingerprint()). Hosted APIs
     # (Anthropic/OpenAI/HF router) don't expose most of these to clients, so they stay None
@@ -64,7 +69,10 @@ class AnthropicClient:
     def _get_client(self):
         if self._client is None:
             import anthropic
-            self._client = anthropic.Anthropic(max_retries=3)
+            # max_retries=0: retries are handled entirely by complete_with_retry() below, so
+            # there's exactly one retry policy in effect (with a known, recorded retry
+            # count) instead of the SDK silently retrying underneath us too.
+            self._client = anthropic.Anthropic(max_retries=0)
         return self._client
 
     def complete(self, *, system: str, user: str, config: ModelConfig) -> ModelResponse:
@@ -75,6 +83,7 @@ class AnthropicClient:
             temperature=config.temperature,
             system=system,
             messages=[{"role": "user", "content": user}],
+            timeout=config.request_timeout_seconds,
         )
         text = "".join(getattr(b, "text", "") for b in response.content if b.type == "text")
         if not text:
@@ -105,11 +114,13 @@ class OpenAICompatibleClient:
     def _get_client(self):
         if self._client is None:
             from openai import OpenAI
+            # max_retries=0: retries are handled entirely by complete_with_retry() below, so
+            # there's exactly one retry policy in effect (with a known, recorded retry
+            # count) instead of the SDK silently retrying underneath us too.
             self._client = OpenAI(
                 base_url=self._base_url,
                 api_key=os.environ.get(self._api_key_env) or "EMPTY",
-                max_retries=3,
-                timeout=60.0,
+                max_retries=0,
             )
         return self._client
 
@@ -122,6 +133,7 @@ class OpenAICompatibleClient:
                 {"role": "user", "content": user},
             ],
             max_tokens=config.max_output_tokens,
+            timeout=config.request_timeout_seconds,
         )
         if config.supports_temperature:
             kwargs["temperature"] = config.temperature
@@ -262,17 +274,48 @@ def get_client(model_key: str) -> ModelClient:
     return client
 
 
+def _is_retryable_exception(e: Exception) -> bool:
+    """True only for timeouts, connection failures, HTTP 429, and HTTP 5xx — never for
+    ordinary bad-request/auth/not-found errors, which retrying can't fix. Checked by class
+    name / duck-typed status_code rather than importing anthropic's and openai's exception
+    classes directly, since both SDKs name these consistently (APITimeoutError is a subclass
+    of APIConnectionError in both; APIStatusError subclasses expose .status_code) and this
+    avoids hard-coupling to either SDK's exact exception hierarchy."""
+    type_names = {t.__name__ for t in type(e).__mro__}
+    if type_names & {"APITimeoutError", "APIConnectionError", "ConnectionError", "TimeoutError"}:
+        return True
+    status_code = getattr(e, "status_code", None)
+    if isinstance(status_code, int):
+        return status_code == 429 or 500 <= status_code < 600
+    return False
+
+
+def _backoff_seconds(attempt: int) -> float:
+    """2, 4, 8, 16, ... for attempt = 0, 1, 2, 3, ..."""
+    return 2.0 * (2 ** attempt)
+
+
 def complete_with_retry(model_key: str, *, system: str, user: str) -> tuple[ModelResponse | None, Exception | None, int, float]:
-    """Call the model, catching exceptions so callers can classify infrastructure failures
-    without a bare try/except at every call site. Returns (response, exception, retry_count,
-    latency_ms). Actual retry/backoff is delegated to each SDK's own max_retries."""
+    """Call the model, retrying only timeouts/connection failures/429/5xx with short
+    exponential backoff (config.max_retries attempts beyond the first, at 2/4/8/...
+    seconds), and catching all exceptions so callers can classify infrastructure failures
+    without a bare try/except at every call site. Returns (response, exception,
+    retry_count, latency_ms) — retry_count is the actual number of retries performed, not a
+    fixed constant. Non-retryable errors and exhausted retries both return immediately with
+    the last exception."""
     config = MODEL_REGISTRY[model_key]
     client = get_client(model_key)
     start = time.monotonic()
-    try:
-        response = client.complete(system=system, user=user, config=config)
-        latency_ms = (time.monotonic() - start) * 1000
-        return response, None, 0, latency_ms
-    except Exception as e:  # noqa: BLE001 - deliberately broad: any failure here is INFRASTRUCTURE_API_FAILURE
-        latency_ms = (time.monotonic() - start) * 1000
-        return None, e, 0, latency_ms
+    retry_count = 0
+    while True:
+        try:
+            response = client.complete(system=system, user=user, config=config)
+            latency_ms = (time.monotonic() - start) * 1000
+            return response, None, retry_count, latency_ms
+        except Exception as e:  # noqa: BLE001 - deliberately broad: any failure here is INFRASTRUCTURE_API_FAILURE
+            if retry_count < config.max_retries and _is_retryable_exception(e):
+                time.sleep(_backoff_seconds(retry_count))
+                retry_count += 1
+                continue
+            latency_ms = (time.monotonic() - start) * 1000
+            return None, e, retry_count, latency_ms

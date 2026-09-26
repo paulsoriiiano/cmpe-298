@@ -42,6 +42,13 @@ class ResumptionTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+        # ConnectionError is retryable (see models._is_retryable_exception), so
+        # complete_with_retry() now really retries with backoff — mock time.sleep so this
+        # test doesn't spend real wall-clock time on it.
+        sleep_patcher = mock.patch.object(models.time, "sleep")
+        sleep_patcher.start()
+        self.addCleanup(sleep_patcher.stop)
+
     def _all_records(self):
         records = []
         for name in sorted(os.listdir(self.tmp_dir)):
@@ -57,7 +64,9 @@ class ResumptionTests(unittest.TestCase):
             runs_dir=self.tmp_dir,
         )
         calls_after_first_run = list(self.fake_client.calls)
-        self.assertEqual(len(calls_after_first_run), 2)  # 1 translate + 1 failed reason attempt
+        # 1 translate + 4 reason attempts (1 initial + 3 retries, the default max_retries,
+        # all failing since fail_reason_stage is still True for every attempt).
+        self.assertEqual(len(calls_after_first_run), 5)
 
         records = self._all_records()
         translate_records = [r for r in records if r["stage"] == "translate"]
@@ -66,6 +75,7 @@ class ResumptionTests(unittest.TestCase):
         self.assertEqual(translate_records[0]["failure_type"], "translation_completed")
         self.assertEqual(len(reason_records), 1)
         self.assertEqual(reason_records[0]["failure_type"], "infrastructure_api_failure")
+        self.assertEqual(reason_records[0]["retry_count"], 3)  # exhausted all retries
 
         # "Outage" is over; restart under a fresh run_id (a real restart would also get a
         # fresh run_id — resumption must not depend on reusing the old one).

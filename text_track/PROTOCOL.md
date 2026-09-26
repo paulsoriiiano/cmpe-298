@@ -183,6 +183,23 @@ Final settings (including whether GPT-5.2 Thinking needs a `reasoning_effort`
 parameter once its actual API surface is confirmed) are still subject to
 revision during **Phase 4 (pilot)**.
 
+**Timeouts and retries**: every request carries a 300-second per-request
+timeout (`ModelConfig.request_timeout_seconds`, passed directly to each
+SDK call, not just a client-construction default). Both provider SDK
+clients are constructed with `max_retries=0` — the SDKs' own retry
+mechanisms are disabled so there's exactly one retry policy in effect, not
+two stacked on top of each other with independent backoff.
+`models.complete_with_retry()` implements that one retry policy itself:
+only timeouts, connection failures, HTTP 429, and HTTP 5xx are retried
+(`models._is_retryable_exception()`), with short exponential backoff
+(2, 4, 8, ... seconds — `2 * 2**attempt`) up to `ModelConfig.max_retries`
+attempts (default 3). Ordinary errors (bad request, auth, not found) fail
+immediately with no retry. The actual number of retries performed is
+recorded per record (`retry_count`) — not a fixed constant. Both
+`request_timeout_seconds` and `max_retries` are plain `ModelConfig` fields,
+so they're automatically included in `models.config_fingerprint()` and the
+run manifest's `model_settings` alongside temperature/max tokens/etc.
+
 ## 6. Statistical comparisons
 
 Primary comparison family (paired, since every condition runs over the same
@@ -228,16 +245,17 @@ changed model configuration (a different vLLM precision, an updated
 checkpoint) can never be silently treated as equivalent to an older run's
 results, the same way `prompt_version`/`protocol_version` protect against a
 prompt-wording change being silently reused. `evaluator_version`
-(`storage.EVALUATOR_VERSION`, currently `"evaluator_v1"`) exists as a
-**separate** axis from `protocol_version`/`prompt_version`: a grading or
-tokenization fix (e.g. the answer-only detection fix, or the
-rationale-token stripping change) doesn't touch prompts at all and wouldn't
-otherwise bump those — without `evaluator_version` in the key, a fresh
-`run_id` could silently reuse another run's completed work via
-`ResumeIndex` even though the two runs' evaluator code disagreed on what a
-record's fields mean. Bump `EVALUATOR_VERSION` whenever grading/tokenization/
-extraction logic changes in a way that would change what a record means,
-even if dataset/protocol/prompt/model config all stay the same.
+(`storage.EVALUATOR_VERSION`, currently `"evaluator_v3"`) exists as a
+**separate** axis from `protocol_version`/`prompt_version`: a grading,
+tokenization, or retry/timeout-behavior fix (e.g. the answer-only
+detection fix, the rationale-token stripping change, or the explicit
+retry-loop rewrite) doesn't touch prompts at all and wouldn't otherwise
+bump those — without `evaluator_version` in the key, a fresh `run_id`
+could silently reuse another run's completed work via `ResumeIndex` even
+though the two runs' evaluator code disagreed on what a record's fields
+mean. Bump `EVALUATOR_VERSION` whenever grading/tokenization/extraction/
+retry logic changes in a way that would change what a record means, even
+if dataset/protocol/prompt/model config all stay the same.
 
 **Older result files can't crash a run**: `ResumeIndex.load_from_runs_dir()`
 tolerates JSONL rows from an older schema (e.g. a `protocol_v1` file missing
