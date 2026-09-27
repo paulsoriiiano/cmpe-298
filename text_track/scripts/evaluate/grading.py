@@ -255,7 +255,9 @@ def classify_result(
     """Classify a completed API call. Precedence (first match wins):
     1. Infrastructure/API failure (exception)
     2. Parser/internal evaluator failure (our own code broke, not the model's fault)
-    3. Translation-stage validation (stage == "translate" is fully self-contained)
+    3. Translation-stage validation (stage == "translate" is fully self-contained; also
+       checks refusal/truncation before falling back to the format-failure heuristic — a
+       nonempty but truncated/refused translation is NOT translation_completed)
     4. Refusal
     5. Repetition degeneration (reason/direct stages only — see below)
     6. Non-degenerate truncation
@@ -295,14 +297,24 @@ def classify_result(
 
     try:
         if stage == "translate":
-            if looks_like_translation_format_failure(response.text):
+            # A nonempty translation can still be unusable: refused or truncated
+            # mid-sentence. Checking only emptiness/answer-tag-misuse (the original
+            # looks_like_translation_format_failure() check) let a truncated or refused
+            # translation through as TRANSLATION_COMPLETED, and the reasoning stage would
+            # then proceed from an incomplete translation.
+            if _REFUSAL_PATTERNS.search(text):
+                failure_type = FailureType.REFUSAL
+            elif is_truncated:
+                failure_type = FailureType.TRUNCATION
+            elif looks_like_translation_format_failure(response.text):
                 failure_type = FailureType.TRANSLATION_FORMAT_FAILURE
             else:
                 # TRANSLATION_COMPLETED means only: the API call succeeded, a nonempty
-                # translation candidate came back, and it didn't contain an answer tag. It
-                # does NOT mean the translation is linguistically correct or faithful —
-                # that's a separate manual annotation pass (generate_annotation_template.py
-                # / PROTOCOL.md section 9), not something this heuristic can judge.
+                # translation candidate came back, it wasn't refused or truncated, and it
+                # didn't contain an answer tag. It does NOT mean the translation is
+                # linguistically correct or faithful — that's a separate manual annotation
+                # pass (generate_annotation_template.py / PROTOCOL.md section 9), not
+                # something this heuristic can judge.
                 failure_type = FailureType.TRANSLATION_COMPLETED
             return ClassificationResult(
                 failure_type=failure_type, extracted_answer=None, is_correct=None,

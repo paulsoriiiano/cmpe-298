@@ -130,6 +130,28 @@ class ClassifyResultTests(unittest.TestCase):
         self.assertIsNone(result.format_compliant)
         self.assertIsNone(result.is_correct)
 
+    def test_translation_truncated_is_truncation_not_completed(self):
+        # Regression: a nonempty translation that got cut off mid-sentence was previously
+        # accepted as TRANSLATION_COMPLETED because the format-failure heuristic only
+        # checked emptiness/answer-tag misuse, not finish_reason.
+        response = canned_response("Daytoy ket maysa a saludsod ma", finish_reason="length")
+        result = classify_result(
+            response=response, exception=None, canonical_answer=None,
+            source="gsm8k", stage="translate",
+        )
+        self.assertEqual(result.failure_type, FailureType.TRUNCATION)
+        self.assertTrue(result.is_truncated)
+        self.assertIsNone(result.is_correct)
+
+    def test_translation_refused_is_refusal_not_completed(self):
+        response = canned_response("I cannot help with that request.")
+        result = classify_result(
+            response=response, exception=None, canonical_answer=None,
+            source="gsm8k", stage="translate",
+        )
+        self.assertEqual(result.failure_type, FailureType.REFUSAL)
+        self.assertIsNone(result.is_correct)
+
     def test_translate_stage_never_auto_classifies_degeneration(self):
         """Caution from the precedence design: applying automatic degeneration detection to
         the translate stage risks a false positive blocking the reasoning stage from
