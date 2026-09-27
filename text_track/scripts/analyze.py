@@ -30,7 +30,10 @@ from collections import Counter, defaultdict
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "data", "eval_runs")
-OUT = os.path.join(SCRIPT_DIR, "..", "data", "analysis.md")
+ANALYSES_DIR = os.path.join(SCRIPT_DIR, "..", "data", "analyses")
+# NOTE: this must never default to data/analysis.md — that file is a preserved artifact
+# from the old 3-pass pipeline (per the conference plan: "Do not combine old and new
+# experimental results"). Each new-schema run gets its own dated file under ANALYSES_DIR.
 
 REASON_CONDITIONS_PRIMARY = ["A_EE", "A_II", "A_IE"]
 ALL_REASONING_CONDITIONS = ["A_EE", "A_II", "A_IE", "A_EI", "A_E0", "A_I0"]
@@ -110,9 +113,14 @@ def wilson_ci(correct: int, total: int, z: float = 1.96) -> tuple[float, float]:
 
 # ---------------- validation ---------------- #
 
-def validate(rows: list[dict]) -> list[str]:
+def validate(rows: list[dict], manifest: dict | None = None) -> list[str]:
     """Returns a list of warning strings. Does not raise — callers decide (via --strict)
-    whether any warnings should be treated as fatal."""
+    whether any warnings should be treated as fatal.
+
+    If `manifest` is given (the run's manifest.json, loaded via load_manifest()), also
+    checks experiment completeness against it: every planned item/model/condition/stage
+    unit must have a row. Without the manifest this can't be checked at all — rows-only
+    validation has no way to know about work that never ran in the first place."""
     warnings = []
 
     seen = Counter((r["item_id"], r["model_key"], r["condition_key"], r["stage"]) for r in rows)
@@ -136,6 +144,9 @@ def validate(rows: list[dict]) -> list[str]:
     if len(evaluator_versions) > 1:
         warnings.append(f"Mixed evaluator_version values in this file: {evaluator_versions}")
 
+    if manifest is not None:
+        warnings.extend(check_manifest_completeness(rows, manifest))
+
     return warnings
 
 
@@ -149,18 +160,144 @@ def is_success(r: dict) -> bool:
     return r["is_correct"] is True
 
 
+PIVOT_CONDITIONS = {"A_IE", "A_EI"}
+DIRECT_CONDITIONS = {"A_E0", "A_I0"}
+
+
+def _expected_stages(condition_key: str) -> list[str]:
+    if condition_key in PIVOT_CONDITIONS:
+        return ["translate", "reason"]
+    if condition_key in DIRECT_CONDITIONS:
+        return ["direct"]
+    return ["reason"]
+
+
+def load_manifest(run_id: str, runs_dir: str | None = None) -> dict:
+    path = os.path.join(runs_dir if runs_dir is not None else RUNS_DIR, f"{run_id}.manifest.json")
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def check_manifest_completeness(rows: list[dict], manifest: dict) -> list[str]:
+    """Verifies every planned (item, model, condition, stage) unit from the manifest has a
+    corresponding row. This catches work that never ran at all (e.g. a crashed run that was
+    never resumed) — validate()'s other checks only look at rows that DO exist, so they
+    can't detect units that are simply missing outright.
+
+    Missing-reason-after-model-caused-translation-failure and
+    missing-reason-after-infra-failure are NOT reported as separate warnings here — those
+    are expected, understood states already surfaced by resolve_condition_outcomes() (the
+    former resolves to an end-to-end-incorrect outcome, the latter to unresolved and is
+    already flagged by validate()'s NOT_EVALUATED_FAILURE_TYPES warning). This check only
+    flags units with NO row at all for a stage that should have at least attempted a call.
+    """
+    warnings = []
+    present = {
+        (r["item_id"], r["model_key"], r["condition_key"], r["stage"]) for r in rows
+    }
+    translate_outcome = {
+        (r["item_id"], r["model_key"], r["condition_key"]): r.get("failure_type")
+        for r in rows if r["stage"] == "translate"
+    }
+
+    planned_by_condition = manifest.get("planned_item_ids_by_condition", {})
+    model_keys = manifest.get("models", [])
+    missing = []
+    for condition_key, item_ids in planned_by_condition.items():
+        expected_stages = _expected_stages(condition_key)
+        for model_key in model_keys:
+            for item_id in item_ids:
+                for stage in expected_stages:
+                    if (item_id, model_key, condition_key, stage) in present:
+                        continue
+                    if stage == "reason" and condition_key in PIVOT_CONDITIONS:
+                        translate_failure_type = translate_outcome.get(
+                            (item_id, model_key, condition_key)
+                        )
+                        if translate_failure_type in (
+                            "translation_format_failure", "infrastructure_api_failure",
+                            "parser_failure",
+                        ):
+                            continue
+                    missing.append((item_id, model_key, condition_key, stage))
+
+    if missing:
+        by_cell = Counter((mk, ck, stage) for _, mk, ck, stage in missing)
+        detail = "; ".join(f"{mk}/{ck}/{stage}={n}" for (mk, ck, stage), n in sorted(by_cell.items()))
+        warnings.append(
+            f"{len(missing)} planned (item, model, condition, stage) unit(s) from the "
+            f"manifest have NO row at all — never ran, or ran but was never written: {detail}"
+        )
+    return warnings
+
+
+def resolve_condition_outcomes(rows: list[dict], model_key: str, condition_key: str) -> dict:
+    """Returns {item_id: is_correct_or_None} — one condition-level outcome per item, for
+    single-stage conditions (direct/reason) as well as staged pivots.
+
+    For A_IE/A_EI, a failed translation means no "reason" row is ever produced for that
+    item — simply reading reason-stage rows (as in_accuracy_denominator does) would make
+    that item silently vanish from the denominator rather than count against the pivot
+    condition's accuracy. Reconstruct the outcome per item instead of fabricating a fake
+    reasoning record in the raw JSONL (which must stay an immutable record of what actually
+    ran):
+      - a completed reason-stage row exists -> use its is_correct
+      - the translate-stage row is a model-caused failure (translation_format_failure) with
+        no corresponding reason row -> end-to-end incorrect (False), since the model failed
+        to produce a usable pivot output
+      - the translate-stage row is an infrastructure/parser failure with no corresponding
+        reason row -> unresolved (None); this is incomplete work, not a graded outcome
+      - no rows at all for this item/model/condition -> not present in the returned dict
+    """
+    condition_rows = [
+        r for r in rows if r["model_key"] == model_key and r["condition_key"] == condition_key
+    ]
+    if condition_key not in PIVOT_CONDITIONS:
+        return {
+            r["item_id"]: r["is_correct"] for r in condition_rows if in_accuracy_denominator(r)
+        }
+
+    reason_by_item = {r["item_id"]: r for r in condition_rows if r["stage"] == "reason"}
+    translate_by_item = {r["item_id"]: r for r in condition_rows if r["stage"] == "translate"}
+
+    outcomes = {}
+    for item_id, translate_row in translate_by_item.items():
+        reason_row = reason_by_item.get(item_id)
+        if reason_row is not None:
+            outcomes[item_id] = reason_row["is_correct"]
+        elif translate_row.get("failure_type") == "translation_format_failure":
+            outcomes[item_id] = False
+        else:
+            outcomes[item_id] = None
+    return outcomes
+
+
 def accuracy_table(rows: list[dict], group_keys: tuple) -> dict:
     """Groups denominator-eligible rows by group_keys (e.g. ("model_key", "condition_key")
     or ("model_key", "condition_key", "source")) and returns
-    {group: {"correct": int, "total": int}}."""
+    {group: {"correct": int, "total": int}}.
+
+    For A_IE/A_EI, outcomes are reconstructed per item via resolve_condition_outcomes() so
+    model-caused translation failures count as incorrect instead of silently disappearing
+    from the denominator; unresolved (infra/parser-failure) items are excluded here, same
+    as elsewhere, and reported separately by validate().
+    """
+    item_source = {r["item_id"]: r["source"] for r in rows}
     table = defaultdict(lambda: {"correct": 0, "total": 0})
-    for r in rows:
-        if not in_accuracy_denominator(r):
-            continue
-        key = tuple(r[k] for k in group_keys)
-        table[key]["total"] += 1
-        if is_success(r):
-            table[key]["correct"] += 1
+    pairs = {(r["model_key"], r["condition_key"]) for r in rows}
+
+    for model_key, condition_key in pairs:
+        outcomes = resolve_condition_outcomes(rows, model_key, condition_key)
+        for item_id, is_correct in outcomes.items():
+            if is_correct is None:
+                continue
+            group_values = {"model_key": model_key, "condition_key": condition_key}
+            if "source" in group_keys:
+                group_values["source"] = item_source.get(item_id)
+            key = tuple(group_values[k] for k in group_keys)
+            table[key]["total"] += 1
+            if is_correct:
+                table[key]["correct"] += 1
     return dict(table)
 
 
@@ -185,16 +322,14 @@ def rate_table(rows: list[dict], flag_field: str, group_keys: tuple, stage_filte
 # ---------------- paired comparisons ---------------- #
 
 def paired_comparison(rows: list[dict], model_key: str, cond_a: str, cond_b: str) -> dict | None:
-    """McNemar comparison of two conditions' reason-stage correctness for one model, paired
-    by item_id. Only items present (and denominator-eligible) in BOTH conditions count."""
-    by_item_a = {
-        r["item_id"]: r["is_correct"] for r in rows
-        if r["model_key"] == model_key and r["condition_key"] == cond_a and in_accuracy_denominator(r)
-    }
-    by_item_b = {
-        r["item_id"]: r["is_correct"] for r in rows
-        if r["model_key"] == model_key and r["condition_key"] == cond_b and in_accuracy_denominator(r)
-    }
+    """McNemar comparison of two conditions' correctness for one model, paired by item_id.
+    Only items present (and resolved, i.e. not None) in BOTH conditions count. Pivot
+    conditions (A_IE/A_EI) use resolve_condition_outcomes() so a model-caused translation
+    failure counts as incorrect rather than making the item vanish from the pairing."""
+    outcomes_a = resolve_condition_outcomes(rows, model_key, cond_a)
+    outcomes_b = resolve_condition_outcomes(rows, model_key, cond_b)
+    by_item_a = {item_id: v for item_id, v in outcomes_a.items() if v is not None}
+    by_item_b = {item_id: v for item_id, v in outcomes_b.items() if v is not None}
     shared_items = sorted(set(by_item_a) & set(by_item_b))
     if not shared_items:
         return None
@@ -234,6 +369,11 @@ def main():
         help="Exit with an error instead of a warning if infrastructure/parser failures "
              "or duplicate keys are found (i.e. refuse to report numbers until rerun).",
     )
+    parser.add_argument(
+        "--output", help="Output path for the analysis report. Defaults to "
+        "text_track/data/analyses/<run_id>_analysis.md — never overwrites the preserved "
+        "legacy text_track/data/analysis.md artifact.",
+    )
     args = parser.parse_args()
 
     if not args.run_id and not args.path:
@@ -241,7 +381,22 @@ def main():
     path = args.path or os.path.join(RUNS_DIR, f"{args.run_id}.jsonl")
     rows = load_rows(path) if args.path else load_run(args.run_id)
 
-    warnings = validate(rows)
+    if args.output:
+        out_path = args.output
+    else:
+        stem = args.run_id or os.path.splitext(os.path.basename(path))[0]
+        out_path = os.path.join(ANALYSES_DIR, f"{stem}_analysis.md")
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+
+    manifest = None
+    if args.run_id:
+        try:
+            manifest = load_manifest(args.run_id)
+        except FileNotFoundError:
+            print(f"WARNING: no manifest found for run_id {args.run_id!r} — "
+                  f"experiment completeness cannot be checked.")
+
+    warnings = validate(rows, manifest)
     for w in warnings:
         print(f"WARNING: {w}")
     if warnings and args.strict:
@@ -329,6 +484,11 @@ def main():
     W("Per PROTOCOL.md section 6: `A_EE` vs `A_II` (overall language gap), `A_II` vs `A_IE` "
       "(English-pivot benefit), `A_EE` vs `A_IE` (remaining pivot gap). Paired by item_id "
       "within each model, since every condition runs over the same item IDs.\n")
+    W("**Holm correction scope**: applied *per model*, across that model's 3 primary "
+      "comparisons — not pooled across models. Each model is evaluated as its own family "
+      "of hypotheses; a p-value from `qwen_3_6_27b` never affects the adjusted threshold "
+      "for `claude_sonnet_4_6`. This is a deliberate, pre-registered choice, stated here "
+      "explicitly per PROTOCOL.md.\n")
     for mk in models:
         comparisons = []
         for cond_a, cond_b, label in PRIMARY_COMPARISONS:
@@ -355,6 +515,12 @@ def main():
 
     # 4. Per-source accuracy
     W("## 4. Accuracy by source\n")
+    W("**Descriptive only** — no per-source paired McNemar test is computed. Several "
+      "sources have small cells (e.g. `bbh_causal_judgement` n=15/50), where an exact "
+      "binomial test would have very low power and a non-significant result would be "
+      "uninformative rather than a genuine null finding. Per-source results below are "
+      "reported as accuracy breakdowns for descriptive/exploratory purposes only; the "
+      "pre-registered primary inferential comparisons are the pooled ones in section 3.\n")
     for mk in models:
         W(f"### {mk}\n")
         W("| Source | " + " | ".join(conditions_present) + " |")
@@ -367,9 +533,9 @@ def main():
             W(f"| {src} | " + " | ".join(cells) + " |")
         W("")
 
-    with open(OUT, "w", encoding="utf-8") as f:
+    with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")
-    print(f"\nWrote {OUT}")
+    print(f"\nWrote {out_path}")
 
 
 if __name__ == "__main__":
