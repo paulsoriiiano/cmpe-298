@@ -6,6 +6,7 @@ No network calls: uses canned ModelResponse objects only (see fakes.CANNED).
 import unittest
 from unittest import mock
 
+from .. import grading
 from ..grading import (
     REPETITION_DEGENERATION_THRESHOLD, TRUNCATION_FINISH_REASONS, FailureType, classify_result,
     compute_repetition_ratio, has_text_beyond_answer, strip_answer_content,
@@ -252,8 +253,8 @@ class DegenerationThresholdTests(unittest.TestCase):
         self.assertEqual(REPETITION_DEGENERATION_THRESHOLD, 0.30)
 
     def test_ratio_at_threshold_is_a_degeneration_candidate(self):
-        with mock.patch(
-            "text_track.scripts.evaluate.grading.compute_repetition_ratio",
+        with mock.patch.object(
+            grading, "compute_repetition_ratio",
             return_value=REPETITION_DEGENERATION_THRESHOLD,
         ):
             result = classify_result(
@@ -264,8 +265,8 @@ class DegenerationThresholdTests(unittest.TestCase):
         self.assertEqual(result.failure_type, FailureType.REPETITION_DEGENERATION)
 
     def test_ratio_just_below_threshold_is_not_a_degeneration_candidate(self):
-        with mock.patch(
-            "text_track.scripts.evaluate.grading.compute_repetition_ratio",
+        with mock.patch.object(
+            grading, "compute_repetition_ratio",
             return_value=REPETITION_DEGENERATION_THRESHOLD - 0.001,
         ):
             result = classify_result(
