@@ -54,11 +54,43 @@ def load_rows(path: str) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
+def merge_resumed_rows(rows: list[dict], ancestor_run_ids: list[str]) -> list[dict]:
+    """A run that resumed from prior runs only WRITES the units it actually executed
+    itself — units it skipped (because a prior run already completed them) are never
+    copied into its own JSONL. Reading only {run_id}.jsonl therefore silently under-counts
+    completeness for any resumed run. The manifest's resuming_from_run_ids already gives
+    the exact set of other run files that hold those skipped units (resume_index scans
+    every file in RUNS_DIR, so a unit is attributed to whichever run's file actually
+    contains it — one level is enough; there is no deeper chain to walk), so merge them in
+    here, keyed by (item_id, model_key, condition_key, stage) with the current run's own
+    rows taking precedence over any duplicate found in an ancestor file."""
+    present = {(r["item_id"], r["model_key"], r["condition_key"], r["stage"]) for r in rows}
+    merged = list(rows)
+    for ancestor_run_id in ancestor_run_ids:
+        ancestor_path = os.path.join(RUNS_DIR, f"{ancestor_run_id}.jsonl")
+        if not os.path.exists(ancestor_path):
+            continue
+        for r in load_rows(ancestor_path):
+            key = (r["item_id"], r["model_key"], r["condition_key"], r["stage"])
+            if key not in present:
+                merged.append(r)
+                present.add(key)
+    return merged
+
+
 def load_run(run_id: str) -> list[dict]:
     path = os.path.join(RUNS_DIR, f"{run_id}.jsonl")
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} not found. Is {run_id!r} a real run_id?")
-    return load_rows(path)
+    rows = load_rows(path)
+    try:
+        manifest = load_manifest(run_id)
+    except FileNotFoundError:
+        return rows
+    ancestor_run_ids = manifest.get("resuming_from_run_ids", [])
+    if not ancestor_run_ids:
+        return rows
+    return merge_resumed_rows(rows, ancestor_run_ids)
 
 
 def mcnemar_exact(b, c):
@@ -163,6 +195,15 @@ def is_success(r: dict) -> bool:
 PIVOT_CONDITIONS = {"A_IE", "A_EI"}
 DIRECT_CONDITIONS = {"A_E0", "A_I0"}
 
+# Translate-stage failure_types that are the MODEL's fault, not infrastructure's — a
+# translation that was refused, truncated, or malformed all mean the model failed to
+# produce a usable pivot translation, so the item counts as end-to-end incorrect rather
+# than being excluded as unresolved. Infra/parser failures are the only case that stays
+# unresolved (None) — see resolve_condition_outcomes().
+MODEL_CAUSED_TRANSLATION_FAILURES = {
+    "translation_format_failure", "truncation", "refusal",
+}
+
 
 def _expected_stages(condition_key: str) -> list[str]:
     if condition_key in PIVOT_CONDITIONS:
@@ -214,9 +255,9 @@ def check_manifest_completeness(rows: list[dict], manifest: dict) -> list[str]:
                         translate_failure_type = translate_outcome.get(
                             (item_id, model_key, condition_key)
                         )
-                        if translate_failure_type in (
-                            "translation_format_failure", "infrastructure_api_failure",
-                            "parser_failure",
+                        if translate_failure_type in MODEL_CAUSED_TRANSLATION_FAILURES or (
+                            translate_failure_type
+                            in NOT_EVALUATED_FAILURE_TYPES
                         ):
                             continue
                     missing.append((item_id, model_key, condition_key, stage))
@@ -242,9 +283,10 @@ def resolve_condition_outcomes(rows: list[dict], model_key: str, condition_key: 
     reasoning record in the raw JSONL (which must stay an immutable record of what actually
     ran):
       - a completed reason-stage row exists -> use its is_correct
-      - the translate-stage row is a model-caused failure (translation_format_failure) with
-        no corresponding reason row -> end-to-end incorrect (False), since the model failed
-        to produce a usable pivot output
+      - the translate-stage row is a model-caused failure (MODEL_CAUSED_TRANSLATION_FAILURES:
+        translation_format_failure, truncation, or refusal) with no corresponding reason
+        row -> end-to-end incorrect (False), since the model failed to produce a usable
+        pivot translation
       - the translate-stage row is an infrastructure/parser failure with no corresponding
         reason row -> unresolved (None); this is incomplete work, not a graded outcome
       - no rows at all for this item/model/condition -> not present in the returned dict
@@ -265,7 +307,7 @@ def resolve_condition_outcomes(rows: list[dict], model_key: str, condition_key: 
         reason_row = reason_by_item.get(item_id)
         if reason_row is not None:
             outcomes[item_id] = reason_row["is_correct"]
-        elif translate_row.get("failure_type") == "translation_format_failure":
+        elif translate_row.get("failure_type") in MODEL_CAUSED_TRANSLATION_FAILURES:
             outcomes[item_id] = False
         else:
             outcomes[item_id] = None
@@ -349,8 +391,12 @@ def paired_comparison(rows: list[dict], model_key: str, cond_a: str, cond_b: str
     # b/c convention: b = correct under cond_b but not cond_a; c = correct under cond_a but not cond_b
     b, c = b_only, a_only
     chi2 = mcnemar_chi2_cc(b, c)
-    acc_a = sum(1 for v in by_item_a.values() if v) / len(by_item_a)
-    acc_b = sum(1 for v in by_item_b.values() if v) / len(by_item_b)
+    # Accuracies must be computed over shared_items — the same paired sample McNemar uses —
+    # not over each condition's full independently-available set. If one condition has an
+    # extra item the other lacks, using each condition's own denominator would report an
+    # accuracy difference inconsistent with the paired test's actual sample.
+    acc_a = sum(1 for i in shared_items if by_item_a[i]) / len(shared_items)
+    acc_b = sum(1 for i in shared_items if by_item_b[i]) / len(shared_items)
     return {
         "n_paired": len(shared_items), "both": both, "a_only": a_only, "b_only": b_only,
         "neither": neither, "discordant_b": b, "discordant_c": c,
@@ -389,14 +435,17 @@ def main():
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
 
     manifest = None
+    manifest_warnings = []
     if args.run_id:
         try:
             manifest = load_manifest(args.run_id)
         except FileNotFoundError:
-            print(f"WARNING: no manifest found for run_id {args.run_id!r} — "
-                  f"experiment completeness cannot be checked.")
+            manifest_warnings.append(
+                f"no manifest found for run_id {args.run_id!r} — experiment completeness "
+                f"cannot be checked."
+            )
 
-    warnings = validate(rows, manifest)
+    warnings = manifest_warnings + validate(rows, manifest)
     for w in warnings:
         print(f"WARNING: {w}")
     if warnings and args.strict:

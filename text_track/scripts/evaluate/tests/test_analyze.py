@@ -3,8 +3,11 @@ main() or touch the real text_track/data/analysis.md / evaluation_results.jsonl,
 preserved as preliminary artifacts from the old 3-pass pipeline per the conference plan's
 file priorities: "Do not combine old and new experimental results.")
 """
+import json
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -120,6 +123,24 @@ class PairedComparisonTests(unittest.TestCase):
         result = analyze.paired_comparison(rows, "claude_sonnet_4_6", "A_EE", "A_II")
         self.assertIsNone(result)  # no shared items at all
 
+    def test_accuracy_uses_paired_denominator_not_each_conditions_full_set(self):
+        # Regression: cond_b has an extra item (i4) with no counterpart in cond_a. Before
+        # the fix, acc_b was computed over len(by_item_b) == 3 instead of the paired
+        # sample size (2), silently changing the reported accuracy difference relative to
+        # what McNemar actually tested.
+        rows = [
+            _row(item_id="i1", condition_key="A_EE", is_correct=True),
+            _row(item_id="i2", condition_key="A_EE", is_correct=False),
+            _row(item_id="i1", condition_key="A_II", is_correct=True),
+            _row(item_id="i2", condition_key="A_II", is_correct=True),
+            _row(item_id="i4", condition_key="A_II", is_correct=True),  # unpaired extra
+        ]
+        result = analyze.paired_comparison(rows, "claude_sonnet_4_6", "A_EE", "A_II")
+        self.assertEqual(result["n_paired"], 2)
+        # Paired accuracy over {i1, i2} only: A_EE = 1/2 = 50%, A_II = 2/2 = 100%.
+        self.assertAlmostEqual(result["accuracy_a"], 50.0)
+        self.assertAlmostEqual(result["accuracy_b"], 100.0)
+
     def test_infra_failure_excluded_from_pairing(self):
         rows = [
             _row(item_id="i1", condition_key="A_EE", is_correct=True),
@@ -149,6 +170,25 @@ class ResolveConditionOutcomesTests(unittest.TestCase):
         rows = [
             _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
                  failure_type="translation_format_failure"),
+        ]
+        outcomes = analyze.resolve_condition_outcomes(rows, "claude_sonnet_4_6", "A_IE")
+        self.assertEqual(outcomes, {"i1": False})
+
+    def test_pivot_truncated_translation_with_no_reason_row_is_incorrect(self):
+        # Regression: a truncated (or refused) translation is also a model-caused
+        # failure — the model failed to produce a usable pivot translation, even though
+        # the response was nonempty and didn't misuse the answer tag.
+        rows = [
+            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
+                 failure_type="truncation"),
+        ]
+        outcomes = analyze.resolve_condition_outcomes(rows, "claude_sonnet_4_6", "A_IE")
+        self.assertEqual(outcomes, {"i1": False})
+
+    def test_pivot_refused_translation_with_no_reason_row_is_incorrect(self):
+        rows = [
+            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
+                 failure_type="refusal"),
         ]
         outcomes = analyze.resolve_condition_outcomes(rows, "claude_sonnet_4_6", "A_IE")
         self.assertEqual(outcomes, {"i1": False})
@@ -276,6 +316,61 @@ class ManifestCompletenessTests(unittest.TestCase):
     def test_validate_skips_manifest_check_when_no_manifest_given(self):
         rows = [_row(item_id="i1", condition_key="A_EE", stage="reason")]
         self.assertEqual(analyze.validate(rows), [])
+
+
+class MergeResumedRowsTests(unittest.TestCase):
+    def test_ancestor_units_not_in_current_run_are_merged_in(self):
+        rows = [_row(item_id="i1")]
+        ancestor_rows = [_row(item_id="i1"), _row(item_id="i2")]
+        tmp_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp_dir, ignore_errors=True)
+        with open(os.path.join(tmp_dir, "ancestor.jsonl"), "w") as f:
+            for r in ancestor_rows:
+                f.write(json.dumps(r) + "\n")
+        old_runs_dir = analyze.RUNS_DIR
+        analyze.RUNS_DIR = tmp_dir
+        self.addCleanup(setattr, analyze, "RUNS_DIR", old_runs_dir)
+
+        merged = analyze.merge_resumed_rows(rows, ["ancestor"])
+        merged_ids = {r["item_id"] for r in merged}
+        self.assertEqual(merged_ids, {"i1", "i2"})
+        # Only 1 copy of i1 — the current run's own row, not a duplicate from the ancestor.
+        self.assertEqual(sum(1 for r in merged if r["item_id"] == "i1"), 1)
+
+    def test_missing_ancestor_file_is_skipped_not_fatal(self):
+        rows = [_row(item_id="i1")]
+        merged = analyze.merge_resumed_rows(rows, ["does-not-exist"])
+        self.assertEqual(merged, rows)
+
+
+class LoadRunMergesAncestorsTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp_dir, ignore_errors=True)
+        self.old_runs_dir = analyze.RUNS_DIR
+        analyze.RUNS_DIR = self.tmp_dir
+        self.addCleanup(setattr, analyze, "RUNS_DIR", self.old_runs_dir)
+
+    def _write_jsonl(self, run_id, rows):
+        with open(os.path.join(self.tmp_dir, f"{run_id}.jsonl"), "w") as f:
+            for r in rows:
+                f.write(json.dumps(r) + "\n")
+
+    def _write_manifest(self, run_id, **fields):
+        with open(os.path.join(self.tmp_dir, f"{run_id}.manifest.json"), "w") as f:
+            json.dump(fields, f)
+
+    def test_run_with_no_manifest_returns_only_its_own_rows(self):
+        self._write_jsonl("run-c", [_row(item_id="i1")])
+        rows = analyze.load_run("run-c")
+        self.assertEqual([r["item_id"] for r in rows], ["i1"])
+
+    def test_run_that_resumed_from_ancestor_merges_ancestor_rows(self):
+        self._write_jsonl("run-a", [_row(item_id="i1"), _row(item_id="i2")])
+        self._write_jsonl("run-c", [_row(item_id="i1")])
+        self._write_manifest("run-c", resuming_from_run_ids=["run-a"])
+        rows = analyze.load_run("run-c")
+        self.assertEqual({r["item_id"] for r in rows}, {"i1", "i2"})
 
 
 class HolmAdjustTests(unittest.TestCase):
