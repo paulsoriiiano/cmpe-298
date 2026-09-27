@@ -55,6 +55,12 @@ class RunEvaluationDryRunTests(unittest.TestCase):
             records = [json.loads(line) for line in f if line.strip()]
         self.assertGreater(len(records), 0)
 
+        # total_planned_units must count planned stages, not items — staged pivots
+        # (A_IE/A_EI) plan 2 units per item (translate + reason), not 1. On a fresh run
+        # with nothing skipped/resumed, every record produced is itself a planned unit, so
+        # this must equal the manifest's declared total exactly.
+        self.assertEqual(manifest["total_planned_units"], len(records))
+
         seen_conditions = set()
         for record in records:
             seen_conditions.add(record["condition_key"])

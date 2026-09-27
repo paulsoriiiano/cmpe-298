@@ -394,7 +394,9 @@ def run_evaluation(
                     if record is not None and resume_index.is_complete(key) and record.run_id != run_id:
                         resuming_from_run_ids.add(record.run_id)
 
-    total_planned_units = sum(len(item_pools[k]) for k in condition_keys) * len(model_keys)
+    total_planned_units = sum(
+        len(item_pools[k]) * len(_planned_stages_for(get_condition(k))) for k in condition_keys
+    ) * len(model_keys)
     write_run_manifest(
         run_id=run_id, dataset_version=dataset_version, protocol_version=protocol_version,
         conditions=condition_keys, models=model_keys, total_planned_units=total_planned_units,
