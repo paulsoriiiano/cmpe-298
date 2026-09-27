@@ -40,10 +40,15 @@ class BackfillLegacyFieldsTests(unittest.TestCase):
         self.assertEqual(backfilled["repetition_ratio"], 0.42)
         self.assertFalse(backfilled["is_truncated"])
 
-    def test_missing_raw_response_does_not_crash_and_yields_zero_ratio(self):
-        record = {"finish_reason": "stop"}
+    def test_missing_raw_response_leaves_both_fields_none_not_fabricated(self):
+        # An infrastructure failure has no raw_response at all — the API call never
+        # returned anything. Backfilling repetition_ratio=0.0/is_truncated=False here would
+        # fabricate "no repetition, not truncated" facts about a response that never
+        # existed, biasing the calibration distribution.
+        record = {"finish_reason": None, "failure_type": "infrastructure_api_failure"}
         backfilled = irs.backfill_legacy_fields(record)
-        self.assertEqual(backfilled["repetition_ratio"], 0.0)
+        self.assertIsNone(backfilled.get("repetition_ratio"))
+        self.assertIsNone(backfilled.get("is_truncated"))
 
 
 if __name__ == "__main__":

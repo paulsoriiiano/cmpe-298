@@ -30,24 +30,37 @@ def backfill_legacy_fields(record: dict) -> dict:
     """evaluator_v3 (and earlier) records predate repetition_ratio/is_truncated —
     compute them from raw_response/finish_reason so old pilot data can be used for
     threshold calibration without rerunning. Records that already have these fields
-    (evaluator_v4+) are returned unchanged."""
+    (evaluator_v4+) are returned unchanged.
+
+    Infrastructure failures have no raw_response at all (the API call never returned a
+    response) — leave both fields as None rather than backfilling repetition_ratio=0.0 /
+    is_truncated=False, which would fabricate "no repetition, not truncated" facts about a
+    response that never existed and bias the calibration distribution."""
+    if record.get("raw_response") is None:
+        return record
     if record.get("repetition_ratio") is None:
-        record["repetition_ratio"] = compute_repetition_ratio(record.get("raw_response") or "")
+        record["repetition_ratio"] = compute_repetition_ratio(record["raw_response"])
     if record.get("is_truncated") is None:
         record["is_truncated"] = record.get("finish_reason") in TRUNCATION_FINISH_REASONS
     return record
 
 
-def load_run(run_id: str) -> list[dict]:
-    path = os.path.join(RUNS_DIR, f"{run_id}.jsonl")
+def load_rows(path: str) -> list[dict]:
     if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} not found. Is {run_id!r} a real run_id?")
+        raise FileNotFoundError(f"{path} not found.")
     records = []
     with open(path, encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 records.append(backfill_legacy_fields(json.loads(line)))
     return records
+
+
+def load_run(run_id: str) -> list[dict]:
+    path = os.path.join(RUNS_DIR, f"{run_id}.jsonl")
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} not found. Is {run_id!r} a real run_id?")
+    return load_rows(path)
 
 
 def _percentile(sorted_values, pct):
@@ -75,11 +88,18 @@ def main():
     parser = argparse.ArgumentParser(
         description="Inspect repetition_ratio distribution for threshold calibration."
     )
-    parser.add_argument("run_id")
+    parser.add_argument("run_id", nargs="?", help="run_id under text_track/data/eval_runs/")
+    parser.add_argument(
+        "--path", help="Explicit path to a result JSONL, instead of run_id — for results "
+        "stored outside the repo's default data/eval_runs directory (e.g. copied over "
+        "from HPC).",
+    )
     parser.add_argument("--top", type=int, default=10, help="How many top-scoring examples to print.")
     args = parser.parse_args()
 
-    records = load_run(args.run_id)
+    if not args.run_id and not args.path:
+        parser.error("Provide a run_id or --path.")
+    records = load_rows(args.path) if args.path else load_run(args.run_id)
     scored = [r for r in records if r.get("repetition_ratio") is not None]
 
     print_distribution("All scored records", scored)
