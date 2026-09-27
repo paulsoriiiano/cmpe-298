@@ -8,14 +8,16 @@ the old 3-pass names, and cannot read the current schema at all.
 Conditions: A_EE, A_II, A_IE, A_EI (reasoning; staged pivots A_IE/A_EI have a "translate"
 stage that is NOT graded) and A_E0/A_I0 (direct-answer controls, stubbed as of this writing).
 
-Accuracy denominator: every reason/direct-stage record where correctness was actually
-evaluable (`is_correct is not None`) — this naturally includes truncation, repetition
-degeneration, refusal, missing-answer, and invalid-format records (all is_correct=False per
-grading.py's semantics table) and naturally EXCLUDES translate-stage rows and
-infrastructure/parser failures (all is_correct=None). Infrastructure/parser failures are
-reported as a validation warning (or a hard failure under --strict) rather than silently
-folded into either the numerator or the denominator — they represent incomplete work, not a
-graded model outcome.
+Accuracy denominator: one resolved condition-level outcome per planned item (see
+resolve_condition_outcomes()). For single-call conditions (A_EE/A_II/A_E0/A_I0) this is
+just that item's reason/direct-stage is_correct. For staged pivot conditions (A_IE/A_EI),
+a model-caused translation failure (translation_format_failure, truncation, or refusal)
+counts as an end-to-end incorrect outcome for that item, even though no reason-stage row
+exists — the model failed to produce a usable pivot translation, which IS an incorrect
+outcome, not a missing one. Infrastructure/parser failures (translation- or reason-stage)
+remain unresolved (excluded from both numerator and denominator) and are reported as a
+validation warning (or a hard failure under --strict) rather than silently folded into
+either — they represent incomplete work, not a graded model outcome.
 
 Usage:
     python3 text_track/scripts/analyze.py <run_id> [--strict]
@@ -54,17 +56,47 @@ def load_rows(path: str) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def merge_resumed_rows(rows: list[dict], ancestor_run_ids: list[str]) -> list[dict]:
+def _planned_keys(manifest: dict) -> set:
+    """The full set of (item_id, model_key, condition_key, stage) units the CURRENT run's
+    manifest actually plans to produce — used to bound what merge_resumed_rows() is allowed
+    to pull in from an ancestor run's file (which may contain thousands of unrelated rows
+    from a much larger prior experiment)."""
+    planned = set()
+    planned_by_condition = manifest.get("planned_item_ids_by_condition", {})
+    model_keys = manifest.get("models", [])
+    for condition_key, item_ids in planned_by_condition.items():
+        for stage in _expected_stages(condition_key):
+            for model_key in model_keys:
+                for item_id in item_ids:
+                    planned.add((item_id, model_key, condition_key, stage))
+    return planned
+
+
+def merge_resumed_rows(rows: list[dict], ancestor_run_ids: list[str], manifest: dict) -> list[dict]:
     """A run that resumed from prior runs only WRITES the units it actually executed
     itself — units it skipped (because a prior run already completed them) are never
     copied into its own JSONL. Reading only {run_id}.jsonl therefore silently under-counts
     completeness for any resumed run. The manifest's resuming_from_run_ids already gives
     the exact set of other run files that hold those skipped units (resume_index scans
     every file in RUNS_DIR, so a unit is attributed to whichever run's file actually
-    contains it — one level is enough; there is no deeper chain to walk), so merge them in
-    here, keyed by (item_id, model_key, condition_key, stage) with the current run's own
-    rows taking precedence over any duplicate found in an ancestor file."""
+    contains it — one level is enough; there is no deeper chain to walk).
+
+    An ancestor run's file is NOT filtered to the current run's item selection by default —
+    it may be a much larger prior experiment (e.g. 1,000 items) that this run only resumed
+    5 of. Pulling in every row from that file would silently inflate this run's analysis
+    with unrelated data. So a row is only merged in if its key is BOTH (a) not already
+    present in `rows`, (b) one of THIS manifest's planned_item_ids_by_condition units, and
+    (c) compatible with this run's dataset_version/protocol_version/evaluator_version and
+    (per model) config_fingerprint — an ancestor row that used a different model
+    configuration is not a valid substitute for this run's own planned unit.
+    """
     present = {(r["item_id"], r["model_key"], r["condition_key"], r["stage"]) for r in rows}
+    planned_keys = _planned_keys(manifest)
+    dataset_version = manifest.get("dataset_version")
+    protocol_version = manifest.get("protocol_version")
+    evaluator_version = manifest.get("evaluator_version")
+    model_settings = manifest.get("model_settings", {})
+
     merged = list(rows)
     for ancestor_run_id in ancestor_run_ids:
         ancestor_path = os.path.join(RUNS_DIR, f"{ancestor_run_id}.jsonl")
@@ -72,9 +104,19 @@ def merge_resumed_rows(rows: list[dict], ancestor_run_ids: list[str]) -> list[di
             continue
         for r in load_rows(ancestor_path):
             key = (r["item_id"], r["model_key"], r["condition_key"], r["stage"])
-            if key not in present:
-                merged.append(r)
-                present.add(key)
+            if key in present or key not in planned_keys:
+                continue
+            if r.get("dataset_version") != dataset_version:
+                continue
+            if r.get("protocol_version") != protocol_version:
+                continue
+            if r.get("evaluator_version") != evaluator_version:
+                continue
+            expected_fp = model_settings.get(r["model_key"], {}).get("config_fingerprint")
+            if expected_fp is None or r.get("config_fingerprint") != expected_fp:
+                continue
+            merged.append(r)
+            present.add(key)
     return merged
 
 
@@ -90,7 +132,7 @@ def load_run(run_id: str) -> list[dict]:
     ancestor_run_ids = manifest.get("resuming_from_run_ids", [])
     if not ancestor_run_ids:
         return rows
-    return merge_resumed_rows(rows, ancestor_run_ids)
+    return merge_resumed_rows(rows, ancestor_run_ids, manifest)
 
 
 def mcnemar_exact(b, c):
@@ -416,6 +458,12 @@ def main():
              "or duplicate keys are found (i.e. refuse to report numbers until rerun).",
     )
     parser.add_argument(
+        "--manifest", help="Explicit path to a run manifest.json. Required for experiment "
+        "completeness checking when using --path with a JSONL that has no sibling "
+        "<name>.manifest.json next to it (e.g. HPC results copied without their manifest) "
+        "— under --strict, a missing manifest is fatal.",
+    )
+    parser.add_argument(
         "--output", help="Output path for the analysis report. Defaults to "
         "text_track/data/analyses/<run_id>_analysis.md — never overwrites the preserved "
         "legacy text_track/data/analysis.md artifact.",
@@ -436,7 +484,18 @@ def main():
 
     manifest = None
     manifest_warnings = []
-    if args.run_id:
+    if args.path:
+        manifest_path = args.manifest or (os.path.splitext(args.path)[0] + ".manifest.json")
+        try:
+            with open(manifest_path, encoding="utf-8") as f:
+                manifest = json.load(f)
+        except FileNotFoundError:
+            manifest_warnings.append(
+                f"no manifest found at {manifest_path!r} — experiment completeness cannot "
+                f"be checked. Pass --manifest explicitly, or place a sibling "
+                f"<name>.manifest.json next to the JSONL."
+            )
+    else:
         try:
             manifest = load_manifest(args.run_id)
         except FileNotFoundError:
@@ -483,8 +542,10 @@ def main():
 
     # 1. Accuracy by model x condition
     W("## 1. Accuracy by model and condition\n")
-    W("Denominator: reason/direct-stage records with evaluable correctness (excludes "
-      "translate-stage rows and infrastructure/parser failures). Truncation, repetition "
+    W("Denominator: one resolved condition-level outcome per planned item. For pivot "
+      "conditions (`A_IE`/`A_EI`), model-caused translation failures (format failure, "
+      "truncation, refusal) count as incorrect; infrastructure and parser failures remain "
+      "unresolved and are excluded. For all conditions, truncation, repetition "
       "degeneration, refusal, missing-answer, and invalid-format all count as incorrect, "
       "per the is_correct semantics in grading.py.\n")
     header = "| Model | " + " | ".join(conditions_present) + " |"

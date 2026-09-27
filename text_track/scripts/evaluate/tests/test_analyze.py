@@ -1,7 +1,8 @@
-"""Tests for analyze.py's core functions (not the CLI/file-writing path — tests never call
-main() or touch the real text_track/data/analysis.md / evaluation_results.jsonl, which are
-preserved as preliminary artifacts from the old 3-pass pipeline per the conference plan's
-file priorities: "Do not combine old and new experimental results.")
+"""Tests for analyze.py's core functions, plus a few CLI-level tests for --path/--manifest
+completeness wiring (these always pass --output to a temp dir and never touch the real
+text_track/data/analysis.md / evaluation_results.jsonl, which are preserved as preliminary
+artifacts from the old 3-pass pipeline per the conference plan's file priorities: "Do not
+combine old and new experimental results.")
 """
 import json
 import os
@@ -319,27 +320,72 @@ class ManifestCompletenessTests(unittest.TestCase):
 
 
 class MergeResumedRowsTests(unittest.TestCase):
-    def test_ancestor_units_not_in_current_run_are_merged_in(self):
-        rows = [_row(item_id="i1")]
-        ancestor_rows = [_row(item_id="i1"), _row(item_id="i2")]
+    def _manifest(self, **overrides):
+        defaults = dict(
+            dataset_version="dataset_v1", protocol_version="protocol_v2",
+            evaluator_version="evaluator_v4",
+            planned_item_ids_by_condition={"A_EE": ["i1", "i2"]},
+            models=["claude_sonnet_4_6"],
+            model_settings={"claude_sonnet_4_6": {"config_fingerprint": "fp-1"}},
+        )
+        defaults.update(overrides)
+        return defaults
+
+    def _compatible_row(self, **overrides):
+        base = dict(
+            dataset_version="dataset_v1", protocol_version="protocol_v2",
+            evaluator_version="evaluator_v4", config_fingerprint="fp-1",
+        )
+        base.update(overrides)
+        return _row(**base)
+
+    def _write_ancestor(self, rows):
         tmp_dir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, tmp_dir, ignore_errors=True)
         with open(os.path.join(tmp_dir, "ancestor.jsonl"), "w") as f:
-            for r in ancestor_rows:
+            for r in rows:
                 f.write(json.dumps(r) + "\n")
         old_runs_dir = analyze.RUNS_DIR
         analyze.RUNS_DIR = tmp_dir
         self.addCleanup(setattr, analyze, "RUNS_DIR", old_runs_dir)
 
-        merged = analyze.merge_resumed_rows(rows, ["ancestor"])
+    def test_planned_and_compatible_ancestor_unit_is_merged_in(self):
+        rows = [self._compatible_row(item_id="i1")]
+        self._write_ancestor([self._compatible_row(item_id="i1"), self._compatible_row(item_id="i2")])
+        merged = analyze.merge_resumed_rows(rows, ["ancestor"], self._manifest())
         merged_ids = {r["item_id"] for r in merged}
         self.assertEqual(merged_ids, {"i1", "i2"})
         # Only 1 copy of i1 — the current run's own row, not a duplicate from the ancestor.
         self.assertEqual(sum(1 for r in merged if r["item_id"] == "i1"), 1)
 
+    def test_ancestor_unit_not_planned_by_current_manifest_is_not_merged(self):
+        # Regression: an ancestor run may be a much larger prior experiment (e.g. 1,000
+        # items) that this run only resumed a handful of. Pulling in every row from that
+        # file would silently inflate this run's analysis with unrelated data.
+        rows = [self._compatible_row(item_id="i1")]
+        self._write_ancestor([
+            self._compatible_row(item_id="i1"),
+            self._compatible_row(item_id="unplanned-item"),
+        ])
+        merged = analyze.merge_resumed_rows(rows, ["ancestor"], self._manifest())
+        merged_ids = {r["item_id"] for r in merged}
+        self.assertEqual(merged_ids, {"i1"})
+
+    def test_ancestor_unit_with_different_dataset_version_is_not_merged(self):
+        rows = [self._compatible_row(item_id="i1")]
+        self._write_ancestor([self._compatible_row(item_id="i2", dataset_version="dataset_v0")])
+        merged = analyze.merge_resumed_rows(rows, ["ancestor"], self._manifest())
+        self.assertEqual({r["item_id"] for r in merged}, {"i1"})
+
+    def test_ancestor_unit_with_different_config_fingerprint_is_not_merged(self):
+        rows = [self._compatible_row(item_id="i1")]
+        self._write_ancestor([self._compatible_row(item_id="i2", config_fingerprint="fp-stale")])
+        merged = analyze.merge_resumed_rows(rows, ["ancestor"], self._manifest())
+        self.assertEqual({r["item_id"] for r in merged}, {"i1"})
+
     def test_missing_ancestor_file_is_skipped_not_fatal(self):
-        rows = [_row(item_id="i1")]
-        merged = analyze.merge_resumed_rows(rows, ["does-not-exist"])
+        rows = [self._compatible_row(item_id="i1")]
+        merged = analyze.merge_resumed_rows(rows, ["does-not-exist"], self._manifest())
         self.assertEqual(merged, rows)
 
 
@@ -366,11 +412,94 @@ class LoadRunMergesAncestorsTests(unittest.TestCase):
         self.assertEqual([r["item_id"] for r in rows], ["i1"])
 
     def test_run_that_resumed_from_ancestor_merges_ancestor_rows(self):
-        self._write_jsonl("run-a", [_row(item_id="i1"), _row(item_id="i2")])
-        self._write_jsonl("run-c", [_row(item_id="i1")])
-        self._write_manifest("run-c", resuming_from_run_ids=["run-a"])
+        compatible = dict(
+            dataset_version="dataset_v1", protocol_version="protocol_v2",
+            evaluator_version="evaluator_v4", config_fingerprint="fp-1",
+        )
+        self._write_jsonl("run-a", [
+            _row(item_id="i1", **compatible), _row(item_id="i2", **compatible),
+        ])
+        self._write_jsonl("run-c", [_row(item_id="i1", **compatible)])
+        self._write_manifest(
+            "run-c", resuming_from_run_ids=["run-a"],
+            planned_item_ids_by_condition={"A_EE": ["i1", "i2"]},
+            models=["claude_sonnet_4_6"],
+            model_settings={"claude_sonnet_4_6": {"config_fingerprint": "fp-1"}},
+            **compatible,
+        )
         rows = analyze.load_run("run-c")
         self.assertEqual({r["item_id"] for r in rows}, {"i1", "i2"})
+
+    def test_run_that_resumed_from_ancestor_does_not_merge_unplanned_or_incompatible_rows(self):
+        compatible = dict(
+            dataset_version="dataset_v1", protocol_version="protocol_v2",
+            evaluator_version="evaluator_v4", config_fingerprint="fp-1",
+        )
+        self._write_jsonl("run-a", [
+            _row(item_id="i1", **compatible),
+            _row(item_id="unplanned-item", **compatible),
+            _row(item_id="i2", **{**compatible, "config_fingerprint": "fp-stale"}),
+        ])
+        self._write_jsonl("run-c", [_row(item_id="i1", **compatible)])
+        self._write_manifest(
+            "run-c", resuming_from_run_ids=["run-a"],
+            planned_item_ids_by_condition={"A_EE": ["i1", "i2"]},
+            models=["claude_sonnet_4_6"],
+            model_settings={"claude_sonnet_4_6": {"config_fingerprint": "fp-1"}},
+            **compatible,
+        )
+        rows = analyze.load_run("run-c")
+        # unplanned-item is not in planned_item_ids_by_condition; i2 in run-a used a stale
+        # config_fingerprint — neither should be merged in.
+        self.assertEqual({r["item_id"] for r in rows}, {"i1"})
+
+
+class MainCliManifestTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp_dir, ignore_errors=True)
+        self.old_argv = sys.argv
+
+    def tearDown(self):
+        sys.argv = self.old_argv
+
+    def _write_jsonl(self, path, rows):
+        with open(path, "w") as f:
+            for r in rows:
+                f.write(json.dumps(r) + "\n")
+
+    def test_path_without_manifest_or_sibling_warns_and_strict_exits(self):
+        jsonl_path = os.path.join(self.tmp_dir, "hpc_results.jsonl")
+        self._write_jsonl(jsonl_path, [_row(item_id="i1")])
+        out_path = os.path.join(self.tmp_dir, "out.md")
+        sys.argv = ["analyze.py", "--path", jsonl_path, "--output", out_path, "--strict"]
+        with self.assertRaises(SystemExit):
+            analyze.main()
+
+    def test_path_with_sibling_manifest_is_found_automatically(self):
+        jsonl_path = os.path.join(self.tmp_dir, "hpc_results.jsonl")
+        self._write_jsonl(jsonl_path, [_row(item_id="i1")])
+        manifest_path = os.path.join(self.tmp_dir, "hpc_results.manifest.json")
+        with open(manifest_path, "w") as f:
+            json.dump({"planned_item_ids_by_condition": {"A_EE": ["i1"]}, "models": ["claude_sonnet_4_6"]}, f)
+        out_path = os.path.join(self.tmp_dir, "out.md")
+        sys.argv = ["analyze.py", "--path", jsonl_path, "--output", out_path, "--strict"]
+        analyze.main()  # must not raise — the sibling manifest satisfies completeness
+        self.assertTrue(os.path.exists(out_path))
+
+    def test_path_with_explicit_manifest_flag_is_used(self):
+        jsonl_path = os.path.join(self.tmp_dir, "hpc_results.jsonl")
+        self._write_jsonl(jsonl_path, [_row(item_id="i1")])
+        manifest_path = os.path.join(self.tmp_dir, "elsewhere.manifest.json")
+        with open(manifest_path, "w") as f:
+            json.dump({"planned_item_ids_by_condition": {"A_EE": ["i1"]}, "models": ["claude_sonnet_4_6"]}, f)
+        out_path = os.path.join(self.tmp_dir, "out.md")
+        sys.argv = [
+            "analyze.py", "--path", jsonl_path, "--manifest", manifest_path,
+            "--output", out_path, "--strict",
+        ]
+        analyze.main()
+        self.assertTrue(os.path.exists(out_path))
 
 
 class HolmAdjustTests(unittest.TestCase):
