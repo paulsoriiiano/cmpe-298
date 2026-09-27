@@ -29,6 +29,10 @@ KEY_COLUMNS = ["run_id", "item_id", "model_key", "condition_key", "stage"]
 CONTEXT_COLUMNS = [
     "source", "original_input", "generated_translation", "generated_rationale",
     "extracted_answer", "canonical_answer", "is_correct", "format_compliant", "failure_type",
+    # Already computed by classify_result() and stored on every record — surfaced here so an
+    # annotator reviewing truncation/degeneration cases doesn't have to cross-reference the
+    # raw JSONL separately.
+    "is_truncated", "repetition_ratio", "degeneration_candidate",
 ]
 
 # Filled in programmatically — mechanically derivable from the run data, not a judgment
@@ -43,11 +47,22 @@ DERIVED_ANNOTATION_COLUMNS = ["has_text_beyond_answer", "requested_language"]
 # as containing a rationale, since the tag text itself is nonempty — exactly the
 # answer-only behavior this field exists to catch. See has_text_beyond_answer above for a
 # machine-computed hint, but the actual determination is a human call.
+#
+# degeneration_type is the human confirmation for degeneration_candidate (a CONTEXT_COLUMN,
+# above): the automatic ratio flags a candidate, but only a human distinguishes what kind of
+# degeneration it actually is — suggested values:
+#   none                          — flagged but not actually degenerate on inspection
+#   lexical_repetition            — the same word/short phrase repeats
+#   phrase_or_sentence_repetition — the same longer phrase or full sentence repeats
+#   reasoning_loop                — the model re-derives/re-states the same reasoning step
+#   other
+#   uncertain
 BLANK_ANNOTATION_COLUMNS = [
     "rationale_present",          # true | false (human-verified, not inferred)
     "language_compliance",        # compliant | mixed | noncompliant | uncertain
     "translation_faithfulness",   # accurate | minor_error | major_error | unusable
     "translation_error_type",     # none | lexical | morphological | semantic | omission | addition
+    "degeneration_type",          # none | lexical_repetition | phrase_or_sentence_repetition | reasoning_loop | other | uncertain
     "annotation_notes",
     "annotator",
 ]

@@ -1,48 +1,61 @@
-"""Numerical analysis of the 3-pass cross-lingual evaluation.
+"""Numerical analysis of the staged, six-condition cross-lingual evaluation.
 
-Produces the metrics that establish the research gap for LLM reasoning in Ilokano:
+Rewritten for the flat per-(item, model, condition, stage) JSONL schema written by
+text_track/scripts/evaluate/ (see storage.ResultRecord) — the previous version of this
+script assumed a nested {model: {pass: {...}}} row per item, hard-coded to Claude/Llama and
+the old 3-pass names, and cannot read the current schema at all.
 
-  P1 = pass1_english_baseline accuracy  (English question -> English CoT)
-  P2 = pass2_native_ilokano  accuracy   (Ilokano question -> Ilokano CoT)
-  P3 = pass3_english_pivot   accuracy   (Ilokano question -> translate-then-English CoT)
+Conditions: A_EE, A_II, A_IE, A_EI (reasoning; staged pivots A_IE/A_EI have a "translate"
+stage that is NOT graded) and A_E0/A_I0 (direct-answer controls, stubbed as of this writing).
 
-Deltas (per model):
-  Total Language Gap   d_total  = P1 - P2
-  Comprehension Penalty d_comp  = P1 - P3
-  Reasoning Penalty     d_reason = P3 - P2   <- the thesis: >0 means reasoning collapses in Ilokano
-  Relative Reasoning Degradation D_rel = (P3 - P2) / P3
+Accuracy denominator: every reason/direct-stage record where correctness was actually
+evaluable (`is_correct is not None`) — this naturally includes truncation, repetition
+degeneration, refusal, missing-answer, and invalid-format records (all is_correct=False per
+grading.py's semantics table) and naturally EXCLUDES translate-stage rows and
+infrastructure/parser failures (all is_correct=None). Infrastructure/parser failures are
+reported as a validation warning (or a hard failure under --strict) rather than silently
+folded into either the numerator or the denominator — they represent incomplete work, not a
+graded model outcome.
 
-Significance: McNemar's exact test on the paired P2-vs-P3 outcomes (same model, same
-items, two conditions). Exact binomial two-sided p-value on the discordant pairs — no
-scipy dependency. Also reports the chi-square statistic with continuity correction.
-
-A null/refused/error pass (extracted_answer is None) counts as is_correct=False: the
-model failed to produce a usable answer under that condition. This is the standard and
-conservative choice; the markdown report breaks out how many such failures each cell has
-so the reader can see what drives the gap.
-
-Writes text_track/data/analysis.md.
+Usage:
+    python3 text_track/scripts/analyze.py <run_id> [--strict]
+    python3 text_track/scripts/analyze.py --path /path/to/some.jsonl
 """
+import argparse
 import json
 import math
 import os
-from collections import defaultdict
+import sys
+from collections import Counter, defaultdict
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(SCRIPT_DIR, "..", "data", "evaluation_results_3pass.jsonl")
+RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "data", "eval_runs")
 OUT = os.path.join(SCRIPT_DIR, "..", "data", "analysis.md")
 
-MODELS = [("claude_sonnet_4_6", "Claude Sonnet 4.6"), ("llama_3_8b", "Llama 3 8B")]
-PASSES = [
-    ("pass1_english_baseline", "P1 English baseline"),
-    ("pass2_native_ilokano", "P2 Native Ilokano"),
-    ("pass3_english_pivot", "P3 English pivot"),
+REASON_CONDITIONS_PRIMARY = ["A_EE", "A_II", "A_IE"]
+ALL_REASONING_CONDITIONS = ["A_EE", "A_II", "A_IE", "A_EI", "A_E0", "A_I0"]
+GRADED_STAGES = {"reason", "direct"}
+NOT_EVALUATED_FAILURE_TYPES = {"infrastructure_api_failure", "parser_failure"}
+
+# The primary comparison family per PROTOCOL.md section 6 — paired (same item, same model),
+# compared via McNemar's test since every condition runs over the same item IDs.
+PRIMARY_COMPARISONS = [
+    ("A_EE", "A_II", "overall language gap"),
+    ("A_II", "A_IE", "English-pivot benefit"),
+    ("A_EE", "A_IE", "remaining pivot gap"),
 ]
 
 
-def load_rows(path):
+def load_rows(path: str) -> list[dict]:
     with open(path, "r", encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
+
+
+def load_run(run_id: str) -> list[dict]:
+    path = os.path.join(RUNS_DIR, f"{run_id}.jsonl")
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} not found. Is {run_id!r} a real run_id?")
+    return load_rows(path)
 
 
 def mcnemar_exact(b, c):
@@ -64,172 +77,295 @@ def mcnemar_chi2_cc(b, c):
 
 
 def chi2_sf_df1(x):
-    """Survival function (upper-tail p-value) of chi-square with 1 df.
-    For df=1, P(X > x) = erfc(sqrt(x/2))."""
+    """Survival function (upper-tail p-value) of chi-square with 1 df."""
     if x <= 0:
         return 1.0
     return math.erfc(math.sqrt(x / 2.0))
 
 
-def cell(row, model_key, pass_key):
-    return row.get("evaluations", {}).get(model_key, {}).get(pass_key, {})
+def holm_adjust(p_values: list[float]) -> list[float]:
+    """Holm step-down adjustment. Returns adjusted p-values in the ORIGINAL input order."""
+    order = sorted(range(len(p_values)), key=lambda i: p_values[i])
+    m = len(p_values)
+    adjusted = [None] * m
+    running_max = 0.0
+    for rank, idx in enumerate(order):
+        adj = min(1.0, (m - rank) * p_values[idx])
+        running_max = max(running_max, adj)
+        adjusted[idx] = running_max
+    return adjusted
+
+
+def wilson_ci(correct: int, total: int, z: float = 1.96) -> tuple[float, float]:
+    """95% Wilson score interval for a binomial proportion — better-behaved than the normal
+    approximation near 0/1, which matters for small per-source samples (e.g. n=15)."""
+    if total == 0:
+        return (0.0, 0.0)
+    p = correct / total
+    denom = 1 + z ** 2 / total
+    center = (p + z ** 2 / (2 * total)) / denom
+    margin = (z * math.sqrt(p * (1 - p) / total + z ** 2 / (4 * total ** 2))) / denom
+    return (max(0.0, center - margin), min(1.0, center + margin))
+
+
+# ---------------- validation ---------------- #
+
+def validate(rows: list[dict]) -> list[str]:
+    """Returns a list of warning strings. Does not raise — callers decide (via --strict)
+    whether any warnings should be treated as fatal."""
+    warnings = []
+
+    seen = Counter((r["item_id"], r["model_key"], r["condition_key"], r["stage"]) for r in rows)
+    duplicates = {k: v for k, v in seen.items() if v > 1}
+    if duplicates:
+        warnings.append(f"{len(duplicates)} duplicate (item, model, condition, stage) keys found.")
+
+    not_evaluated = [r for r in rows if r.get("failure_type") in NOT_EVALUATED_FAILURE_TYPES]
+    if not_evaluated:
+        by_cell = Counter((r["model_key"], r["condition_key"], r["failure_type"]) for r in not_evaluated)
+        detail = "; ".join(f"{mk}/{ck}/{ft}={n}" for (mk, ck, ft), n in sorted(by_cell.items()))
+        warnings.append(
+            f"{len(not_evaluated)} infrastructure/parser failure(s) excluded from accuracy "
+            f"denominators (rerun these before treating numbers as final): {detail}"
+        )
+
+    protocol_versions = {r.get("protocol_version") for r in rows}
+    evaluator_versions = {r.get("evaluator_version") for r in rows}
+    if len(protocol_versions) > 1:
+        warnings.append(f"Mixed protocol_version values in this file: {protocol_versions}")
+    if len(evaluator_versions) > 1:
+        warnings.append(f"Mixed evaluator_version values in this file: {evaluator_versions}")
+
+    return warnings
+
+
+# ---------------- accuracy ---------------- #
+
+def in_accuracy_denominator(r: dict) -> bool:
+    return r["stage"] in GRADED_STAGES and r["is_correct"] is not None
+
+
+def is_success(r: dict) -> bool:
+    return r["is_correct"] is True
+
+
+def accuracy_table(rows: list[dict], group_keys: tuple) -> dict:
+    """Groups denominator-eligible rows by group_keys (e.g. ("model_key", "condition_key")
+    or ("model_key", "condition_key", "source")) and returns
+    {group: {"correct": int, "total": int}}."""
+    table = defaultdict(lambda: {"correct": 0, "total": 0})
+    for r in rows:
+        if not in_accuracy_denominator(r):
+            continue
+        key = tuple(r[k] for k in group_keys)
+        table[key]["total"] += 1
+        if is_success(r):
+            table[key]["correct"] += 1
+    return dict(table)
+
+
+def rate_table(rows: list[dict], flag_field: str, group_keys: tuple, stage_filter=GRADED_STAGES) -> dict:
+    """Fraction of rows (within `stage_filter`) where rows[flag_field] is truthy, grouped by
+    group_keys. Used for truncation/degeneration rates — these are computed over ALL
+    stage-matching rows (not just the accuracy denominator), since a translate-stage
+    degeneration score is still worth reporting even though it's never auto-classified."""
+    table = defaultdict(lambda: {"flagged": 0, "total": 0})
+    for r in rows:
+        if r["stage"] not in stage_filter:
+            continue
+        if r.get(flag_field) is None:
+            continue
+        key = tuple(r[k] for k in group_keys)
+        table[key]["total"] += 1
+        if r.get(flag_field):
+            table[key]["flagged"] += 1
+    return dict(table)
+
+
+# ---------------- paired comparisons ---------------- #
+
+def paired_comparison(rows: list[dict], model_key: str, cond_a: str, cond_b: str) -> dict | None:
+    """McNemar comparison of two conditions' reason-stage correctness for one model, paired
+    by item_id. Only items present (and denominator-eligible) in BOTH conditions count."""
+    by_item_a = {
+        r["item_id"]: r["is_correct"] for r in rows
+        if r["model_key"] == model_key and r["condition_key"] == cond_a and in_accuracy_denominator(r)
+    }
+    by_item_b = {
+        r["item_id"]: r["is_correct"] for r in rows
+        if r["model_key"] == model_key and r["condition_key"] == cond_b and in_accuracy_denominator(r)
+    }
+    shared_items = sorted(set(by_item_a) & set(by_item_b))
+    if not shared_items:
+        return None
+
+    both = a_only = b_only = neither = 0
+    for item_id in shared_items:
+        ca, cb = by_item_a[item_id], by_item_b[item_id]
+        if ca and cb:
+            both += 1
+        elif ca and not cb:
+            a_only += 1
+        elif cb and not ca:
+            b_only += 1
+        else:
+            neither += 1
+
+    # b/c convention: b = correct under cond_b but not cond_a; c = correct under cond_a but not cond_b
+    b, c = b_only, a_only
+    chi2 = mcnemar_chi2_cc(b, c)
+    acc_a = sum(1 for v in by_item_a.values() if v) / len(by_item_a)
+    acc_b = sum(1 for v in by_item_b.values() if v) / len(by_item_b)
+    return {
+        "n_paired": len(shared_items), "both": both, "a_only": a_only, "b_only": b_only,
+        "neither": neither, "discordant_b": b, "discordant_c": c,
+        "p_exact": mcnemar_exact(b, c), "chi2_cc": chi2, "p_chi2": chi2_sf_df1(chi2),
+        "accuracy_a": acc_a * 100, "accuracy_b": acc_b * 100,
+        "paired_diff_pp": (acc_b - acc_a) * 100,
+    }
 
 
 def main():
-    rows = load_rows(DATA)
-    n = len(rows)
-    sources = sorted({r.get("source", "?") for r in rows})
+    parser = argparse.ArgumentParser(description="Analyze a staged, six-condition evaluation run.")
+    parser.add_argument("run_id", nargs="?", help="run_id under text_track/data/eval_runs/")
+    parser.add_argument("--path", help="Explicit path to a result JSONL, instead of run_id.")
+    parser.add_argument(
+        "--strict", action="store_true",
+        help="Exit with an error instead of a warning if infrastructure/parser failures "
+             "or duplicate keys are found (i.e. refuse to report numbers until rerun).",
+    )
+    args = parser.parse_args()
 
-    # --- accuracy per model/pass (overall + per source) ---
-    # correct counts, and "no answer" counts (extracted is None)
-    acc = {m: {p: {"correct": 0, "total": 0, "noans": 0} for p, _ in PASSES} for m, _ in MODELS}
-    acc_src = {m: {s: {p: {"correct": 0, "total": 0} for p, _ in PASSES} for s in sources}
-               for m, _ in MODELS}
+    if not args.run_id and not args.path:
+        parser.error("Provide a run_id or --path.")
+    path = args.path or os.path.join(RUNS_DIR, f"{args.run_id}.jsonl")
+    rows = load_rows(path) if args.path else load_run(args.run_id)
 
-    for r in rows:
-        s = r.get("source", "?")
-        for mk, _ in MODELS:
-            for pk, _ in PASSES:
-                c = cell(r, mk, pk)
-                acc[mk][pk]["total"] += 1
-                acc_src[mk][s][pk]["total"] += 1
-                if c.get("is_correct"):
-                    acc[mk][pk]["correct"] += 1
-                    acc_src[mk][s][pk]["correct"] += 1
-                if c.get("extracted_answer") is None:
-                    acc[mk][pk]["noans"] += 1
+    warnings = validate(rows)
+    for w in warnings:
+        print(f"WARNING: {w}")
+    if warnings and args.strict:
+        print("\n--strict was given: refusing to report numbers until the above are resolved.")
+        sys.exit(1)
 
-    def pct(corr, tot):
-        return (corr / tot * 100) if tot else 0.0
+    models = sorted({r["model_key"] for r in rows})
+    conditions_present = sorted({r["condition_key"] for r in rows}, key=lambda c: ALL_REASONING_CONDITIONS.index(c) if c in ALL_REASONING_CONDITIONS else 99)
+    sources = sorted({r["source"] for r in rows})
 
-    # --- McNemar P2 vs P3 per model ---
-    mcnemar = {}
-    for mk, _ in MODELS:
-        both = p2only = p3only = neither = 0
-        for r in rows:
-            c2 = bool(cell(r, mk, "pass2_native_ilokano").get("is_correct"))
-            c3 = bool(cell(r, mk, "pass3_english_pivot").get("is_correct"))
-            if c2 and c3:
-                both += 1
-            elif c2 and not c3:
-                p2only += 1   # passed native, failed pivot
-            elif c3 and not c2:
-                p3only += 1   # failed native, passed pivot
-            else:
-                neither += 1
-        # discordant: b = passed P3 / failed P2, c = passed P2 / failed P3
-        b, c = p3only, p2only
-        mcnemar[mk] = {
-            "both": both, "p2only": p2only, "p3only": p3only, "neither": neither,
-            "b_p3not2": b, "c_p2not3": c,
-            "p_exact": mcnemar_exact(b, c),
-            "chi2_cc": mcnemar_chi2_cc(b, c),
-            "p_chi2": chi2_sf_df1(mcnemar_chi2_cc(b, c)),
-        }
+    acc_by_model_cond = accuracy_table(rows, ("model_key", "condition_key"))
+    acc_by_model_cond_source = accuracy_table(rows, ("model_key", "condition_key", "source"))
+    trunc_by_model_cond = rate_table(rows, "is_truncated", ("model_key", "condition_key"))
+    degen_by_model_cond = rate_table(rows, "degeneration_candidate", ("model_key", "condition_key"))
+    degen_by_model_cond_source = rate_table(rows, "degeneration_candidate", ("model_key", "condition_key", "source"))
 
-    # ---------------- build markdown ----------------
+    def pct(cell):
+        return (cell["correct"] / cell["total"] * 100) if cell["total"] else 0.0
+
+    def rate_pct(cell):
+        return (cell["flagged"] / cell["total"] * 100) if cell["total"] else 0.0
+
     L = []
     W = L.append
-    W("# Numerical Analysis — 3-Pass Cross-Lingual Reasoning (Ilokano vs. English)\n")
-    W(f"Dataset: `{os.path.relpath(DATA, SCRIPT_DIR)}` — **{n} items**, "
-      f"sources: {', '.join(sources)}.\n")
-    W("**Passes.** P1 = English question → English chain-of-thought (baseline). "
-      "P2 = Ilokano question → reasoning entirely in Ilokano (native). "
-      "P3 = Ilokano question → translate to English, then reason in English (pivot).\n")
-    W("**Scoring.** A pass is correct only if it emitted a parseable `<answer>` matching "
-      "the gold (English or Ilokano reference). A pass with no extractable answer "
-      "(refusal, degeneration, or no answer tag) counts as incorrect — the model failed "
-      "to produce a usable answer under that condition.\n")
-
-    # 1. Headline accuracy
-    W("## 1. Accuracy by model and pass\n")
-    W("| Model | P1 English | P2 Native Ilokano | P3 English Pivot |")
-    W("|---|---|---|---|")
-    P = {}
-    for mk, mname in MODELS:
-        a = acc[mk]
-        p1 = pct(a["pass1_english_baseline"]["correct"], a["pass1_english_baseline"]["total"])
-        p2 = pct(a["pass2_native_ilokano"]["correct"], a["pass2_native_ilokano"]["total"])
-        p3 = pct(a["pass3_english_pivot"]["correct"], a["pass3_english_pivot"]["total"])
-        P[mk] = (p1, p2, p3)
-        W(f"| {mname} "
-          f"| {a['pass1_english_baseline']['correct']}/{a['pass1_english_baseline']['total']} ({p1:.1f}%) "
-          f"| {a['pass2_native_ilokano']['correct']}/{a['pass2_native_ilokano']['total']} ({p2:.1f}%) "
-          f"| {a['pass3_english_pivot']['correct']}/{a['pass3_english_pivot']['total']} ({p3:.1f}%) |")
-    W("")
-    W("Passes with no extractable answer (counted incorrect above):\n")
-    W("| Model | P1 | P2 | P3 |")
-    W("|---|---|---|---|")
-    for mk, mname in MODELS:
-        a = acc[mk]
-        W(f"| {mname} | {a['pass1_english_baseline']['noans']} "
-          f"| {a['pass2_native_ilokano']['noans']} | {a['pass3_english_pivot']['noans']} |")
-    W("")
-
-    # 2. Deltas
-    W("## 2. Performance deltas (the gaps)\n")
-    W("- **Total Language Gap** Δ_total = P1 − P2 (raw English-vs-Ilokano gap)\n"
-      "- **Comprehension Penalty** Δ_comp = P1 − P3 (translation/understanding loss; "
-      "both reason in English)\n"
-      "- **Reasoning Penalty** Δ_reason = P3 − P2 (the thesis — collapse when forced to "
-      "reason in Ilokano tokens)\n"
-      "- **Relative Reasoning Degradation** D_rel = (P3 − P2) / P3 × 100% (of the items "
-      "the model understood, the share it failed purely from reasoning in Ilokano)\n")
-    W("| Model | P1 | P2 | P3 | Δ_total | Δ_comp | Δ_reason | D_rel |")
-    W("|---|---|---|---|---|---|---|---|")
-    for mk, mname in MODELS:
-        p1, p2, p3 = P[mk]
-        d_total, d_comp, d_reason = p1 - p2, p1 - p3, p3 - p2
-        d_rel = ((p3 - p2) / p3 * 100) if p3 else float("nan")
-        W(f"| {mname} | {p1:.1f}% | {p2:.1f}% | {p3:.1f}% "
-          f"| {d_total:+.1f} | {d_comp:+.1f} | {d_reason:+.1f} | {d_rel:.1f}% |")
-    W("")
-
-    # 3. McNemar
-    W("## 3. Statistical significance — McNemar's test (P2 vs. P3)\n")
-    W("Same model, same items, two paired conditions (native vs. pivot). Discordant pairs "
-      "drive the test: **b** = items the model got right under the pivot but wrong "
-      "natively; **c** = right natively but wrong under the pivot. Two-sided exact "
-      "binomial p-value; chi-square reported with Yates continuity correction (df=1).\n")
-    for mk, mname in MODELS:
-        m = mcnemar[mk]
-        W(f"### {mname}\n")
-        W("| | Passed P3 (pivot) | Failed P3 (pivot) |")
-        W("|---|---|---|")
-        W(f"| **Passed P2 (native)** | {m['both']} (both correct) | {m['c_p2not3']} (native only) |")
-        W(f"| **Failed P2 (native)** | {m['b_p3not2']} (pivot only) | {m['neither']} (both wrong) |")
+    W("# Numerical Analysis — Staged Six-Condition Cross-Lingual Reasoning\n")
+    W(f"Source file: `{path}` — **{len(rows)} records**, models: {', '.join(models)}, "
+      f"conditions present: {', '.join(conditions_present)}, sources: {', '.join(sources)}.\n")
+    if warnings:
+        W("**Validation warnings** (see console output above) — numbers below exclude "
+          "infrastructure/parser failures from the denominator entirely rather than "
+          "silently counting them as model errors:\n")
+        for w in warnings:
+            W(f"- {w}")
         W("")
-        sig = "**significant** (p < 0.05)" if m["p_exact"] < 0.05 else "not significant (p ≥ 0.05)"
-        W(f"- Discordant pairs: b (pivot-only) = {m['b_p3not2']}, c (native-only) = {m['c_p2not3']}")
-        W(f"- McNemar χ² (continuity-corrected) = {m['chi2_cc']:.2f}, "
-          f"p = {m['p_chi2']:.3e}")
-        W(f"- Exact binomial two-sided p = {m['p_exact']:.3e} — {sig}")
+
+    # 1. Accuracy by model x condition
+    W("## 1. Accuracy by model and condition\n")
+    W("Denominator: reason/direct-stage records with evaluable correctness (excludes "
+      "translate-stage rows and infrastructure/parser failures). Truncation, repetition "
+      "degeneration, refusal, missing-answer, and invalid-format all count as incorrect, "
+      "per the is_correct semantics in grading.py.\n")
+    header = "| Model | " + " | ".join(conditions_present) + " |"
+    W(header)
+    W("|---|" + "---|" * len(conditions_present))
+    for mk in models:
+        cells = []
+        for ck in conditions_present:
+            c = acc_by_model_cond.get((mk, ck), {"correct": 0, "total": 0})
+            lo, hi = wilson_ci(c["correct"], c["total"])
+            cells.append(f"{c['correct']}/{c['total']} ({pct(c):.1f}%, 95% CI {lo*100:.1f}-{hi*100:.1f})")
+        W(f"| {mk} | " + " | ".join(cells) + " |")
+    W("")
+
+    # 2. Truncation / degeneration rates
+    W("## 2. Truncation and repetition-degeneration rates\n")
+    W("Computed over reason/direct-stage records (denominator-eligible), independent of "
+      "final failure_type — a record can be both truncated and flagged as a degeneration "
+      "candidate; both facts are counted here separately.\n")
+    W("| Model | Condition | Truncation rate | Degeneration-candidate rate |")
+    W("|---|---|---|---|")
+    for mk in models:
+        for ck in conditions_present:
+            t = trunc_by_model_cond.get((mk, ck), {"flagged": 0, "total": 0})
+            d = degen_by_model_cond.get((mk, ck), {"flagged": 0, "total": 0})
+            if t["total"] == 0 and d["total"] == 0:
+                continue
+            W(f"| {mk} | {ck} | {t['flagged']}/{t['total']} ({rate_pct(t):.1f}%) "
+              f"| {d['flagged']}/{d['total']} ({rate_pct(d):.1f}%) |")
+    W("")
+    W("### By source\n")
+    W("| Model | Condition | Source | Degeneration-candidate rate |")
+    W("|---|---|---|---|")
+    for (mk, ck, src), d in sorted(degen_by_model_cond_source.items()):
+        if d["total"] == 0:
+            continue
+        W(f"| {mk} | {ck} | {src} | {d['flagged']}/{d['total']} ({rate_pct(d):.1f}%) |")
+    W("")
+    W("**Reminder**: `degeneration_candidate` is an automatic flag against "
+      "`grading.REPETITION_DEGENERATION_THRESHOLD`, which is NOT YET calibrated from real "
+      "pilot data as of this writing (see `inspect_repetition_scores.py`). Treat the rates "
+      "above as candidates pending human confirmation, not a final degeneration rate.\n")
+
+    # 3. Primary paired comparisons
+    W("## 3. Primary accuracy comparisons (paired, McNemar)\n")
+    W("Per PROTOCOL.md section 6: `A_EE` vs `A_II` (overall language gap), `A_II` vs `A_IE` "
+      "(English-pivot benefit), `A_EE` vs `A_IE` (remaining pivot gap). Paired by item_id "
+      "within each model, since every condition runs over the same item IDs.\n")
+    for mk in models:
+        comparisons = []
+        for cond_a, cond_b, label in PRIMARY_COMPARISONS:
+            if cond_a not in conditions_present or cond_b not in conditions_present:
+                continue
+            result = paired_comparison(rows, mk, cond_a, cond_b)
+            if result is None:
+                continue
+            comparisons.append((cond_a, cond_b, label, result))
+        if not comparisons:
+            continue
+        W(f"### {mk}\n")
+        p_values = [r["p_exact"] for _, _, _, r in comparisons]
+        holm = holm_adjust(p_values)
+        W("| Comparison | n paired | Acc A | Acc B | Diff (pp) | Discordant (b,c) | "
+          "Exact p | Holm-adjusted p |")
+        W("|---|---|---|---|---|---|---|---|")
+        for (cond_a, cond_b, label, r), p_holm in zip(comparisons, holm):
+            W(f"| {cond_a} vs {cond_b} ({label}) | {r['n_paired']} | {r['accuracy_a']:.1f}% "
+              f"| {r['accuracy_b']:.1f}% | {r['paired_diff_pp']:+.1f} "
+              f"| ({r['discordant_b']}, {r['discordant_c']}) | {r['p_exact']:.3e} "
+              f"| {p_holm:.3e} |")
         W("")
 
     # 4. Per-source accuracy
-    W("## 4. Accuracy by source benchmark\n")
-    for mk, mname in MODELS:
-        W(f"### {mname}\n")
-        W("| Source | P1 English | P2 Native | P3 Pivot | Δ_reason (P3−P2) |")
-        W("|---|---|---|---|---|")
-        for s in sources:
-            a = acc_src[mk][s]
-            p1 = pct(a["pass1_english_baseline"]["correct"], a["pass1_english_baseline"]["total"])
-            p2 = pct(a["pass2_native_ilokano"]["correct"], a["pass2_native_ilokano"]["total"])
-            p3 = pct(a["pass3_english_pivot"]["correct"], a["pass3_english_pivot"]["total"])
-            tot = a["pass1_english_baseline"]["total"]
-            W(f"| {s} (n={tot}) | {p1:.1f}% | {p2:.1f}% | {p3:.1f}% | {p3 - p2:+.1f} |")
+    W("## 4. Accuracy by source\n")
+    for mk in models:
+        W(f"### {mk}\n")
+        W("| Source | " + " | ".join(conditions_present) + " |")
+        W("|---|" + "---|" * len(conditions_present))
+        for src in sources:
+            cells = []
+            for ck in conditions_present:
+                c = acc_by_model_cond_source.get((mk, ck, src), {"correct": 0, "total": 0})
+                cells.append(f"{c['correct']}/{c['total']} ({pct(c):.1f}%)" if c["total"] else "—")
+            W(f"| {src} | " + " | ".join(cells) + " |")
         W("")
-
-    # console summary
-    print(f"Loaded {n} rows. Sources: {sources}")
-    for mk, mname in MODELS:
-        p1, p2, p3 = P[mk]
-        m = mcnemar[mk]
-        print(f"\n{mname}: P1={p1:.1f}% P2={p2:.1f}% P3={p3:.1f}%  "
-              f"d_total={p1-p2:+.1f} d_comp={p1-p3:+.1f} d_reason={p3-p2:+.1f}")
-        print(f"  McNemar P2vP3: b(pivot-only)={m['b_p3not2']} c(native-only)={m['c_p2not3']} "
-              f"exact p={m['p_exact']:.3e}")
 
     with open(OUT, "w", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")

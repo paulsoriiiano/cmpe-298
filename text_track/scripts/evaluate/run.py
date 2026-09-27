@@ -88,7 +88,7 @@ def _run_single_call_condition(
     response, exception, retry_count, latency_ms = complete_with_retry(
         model_key, system=system, user=user_input,
     )
-    failure_type, extracted, is_correct, format_compliant = grading.classify_result(
+    classification = grading.classify_result(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="reason",
     )
@@ -111,9 +111,11 @@ def _run_single_call_condition(
         original_input=user_input, generated_translation=None,
         generated_rationale=response.text if response else None,
         raw_response=response.text if response else None,
-        extracted_answer=extracted, canonical_answer=item["canonical_answer"],
-        is_correct=is_correct, format_compliant=format_compliant,
-        failure_type=failure_type.value,
+        extracted_answer=classification.extracted_answer, canonical_answer=item["canonical_answer"],
+        is_correct=classification.is_correct, format_compliant=classification.format_compliant,
+        failure_type=classification.failure_type.value,
+        is_truncated=classification.is_truncated, repetition_ratio=classification.repetition_ratio,
+        degeneration_candidate=classification.degeneration_candidate,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
         **token_fields, **descriptive,
@@ -147,7 +149,7 @@ def _run_direct_condition(
     response, exception, retry_count, latency_ms = complete_with_retry(
         model_key, system=system, user=user_input,
     )
-    failure_type, extracted, is_correct, format_compliant = grading.classify_result(
+    classification = grading.classify_result(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="direct",
     )
@@ -168,9 +170,11 @@ def _run_direct_condition(
         condition_key=condition.key, stage="direct", prompt_version=condition.prompt_version,
         original_input=user_input, generated_translation=None, generated_rationale=None,
         raw_response=response.text if response else None,
-        extracted_answer=extracted, canonical_answer=item["canonical_answer"],
-        is_correct=is_correct, format_compliant=format_compliant,
-        failure_type=failure_type.value,
+        extracted_answer=classification.extracted_answer, canonical_answer=item["canonical_answer"],
+        is_correct=classification.is_correct, format_compliant=classification.format_compliant,
+        failure_type=classification.failure_type.value,
+        is_truncated=classification.is_truncated, repetition_ratio=classification.repetition_ratio,
+        degeneration_candidate=classification.degeneration_candidate,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
         **token_fields, **descriptive,
@@ -214,7 +218,7 @@ def _run_staged_pivot_condition(
         response, exception, retry_count, latency_ms = complete_with_retry(
             model_key, system=translation_system, user=user_input,
         )
-        failure_type, _, _, format_compliant = grading.classify_result(
+        classification = grading.classify_result(
             response=response, exception=exception, canonical_answer=None,
             source=item["source"], stage="translate",
         )
@@ -232,8 +236,10 @@ def _run_staged_pivot_condition(
             original_input=user_input, generated_translation=response.text if response else None,
             generated_rationale=None, raw_response=response.text if response else None,
             extracted_answer=None, canonical_answer=item["canonical_answer"],
-            is_correct=None, format_compliant=format_compliant,
-            failure_type=failure_type.value,
+            is_correct=classification.is_correct, format_compliant=classification.format_compliant,
+            failure_type=classification.failure_type.value,
+            is_truncated=classification.is_truncated, repetition_ratio=classification.repetition_ratio,
+            degeneration_candidate=classification.degeneration_candidate,
             input_tokens=response.input_tokens if response else None,
             output_tokens=response.output_tokens if response else None,
             **token_fields, **descriptive,
@@ -263,7 +269,7 @@ def _run_staged_pivot_condition(
     response, exception, retry_count, latency_ms = complete_with_retry(
         model_key, system=reasoning_system, user=translated_text,
     )
-    failure_type, extracted, is_correct, format_compliant = grading.classify_result(
+    classification = grading.classify_result(
         response=response, exception=exception, canonical_answer=item["canonical_answer"],
         source=item["source"], stage="reason",
     )
@@ -283,9 +289,11 @@ def _run_staged_pivot_condition(
         original_input=translated_text, generated_translation=None,
         generated_rationale=response.text if response else None,
         raw_response=response.text if response else None,
-        extracted_answer=extracted, canonical_answer=item["canonical_answer"],
-        is_correct=is_correct, format_compliant=format_compliant,
-        failure_type=failure_type.value,
+        extracted_answer=classification.extracted_answer, canonical_answer=item["canonical_answer"],
+        is_correct=classification.is_correct, format_compliant=classification.format_compliant,
+        failure_type=classification.failure_type.value,
+        is_truncated=classification.is_truncated, repetition_ratio=classification.repetition_ratio,
+        degeneration_candidate=classification.degeneration_candidate,
         input_tokens=response.input_tokens if response else None,
         output_tokens=response.output_tokens if response else None,
         **token_fields, **descriptive,

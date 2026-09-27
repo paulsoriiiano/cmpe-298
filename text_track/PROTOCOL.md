@@ -2,7 +2,8 @@
 
 - Protocol version: `protocol_v2`
 - Date: 2026-09-23 (implementation status updated 2026-09-24; v2 revision 2026-09-25;
-  resumption/tokenization/annotation hardening 2026-09-25)
+  resumption/tokenization/annotation hardening 2026-09-25; retry/timeout policy and
+  truncation/degeneration separation 2026-09-26 — `evaluator_v4`)
 - Pinned dataset version: `dataset_conference_v1.1` (see `data/dataset_manifest.json`)
 - **STATUS: implemented in `text_track/scripts/evaluate/`, not yet piloted. No real
   model API calls have been made under `protocol_v2` (only fake-client tests so far).**
@@ -138,6 +139,81 @@ succeeded, a nonempty translation candidate came back, and it didn't
 contain an answer tag (i.e. the model didn't try to solve instead of
 translate). It says nothing about whether the translation is linguistically
 faithful — that's a separate manual check (section 9).
+
+**Truncation and repetition degeneration are stored separately, never
+collapsed into one fact.** A pilot run against `qwen_3_6_27b`/SEA-LION
+surfaced responses that were BOTH truncated (`finish_reason == "length"`)
+AND degenerating into a repeated loop before running out of tokens — the
+original design forced these into a single `failure_type`, silently
+discarding whichever fact lost. Every `ResultRecord` now carries all of:
+
+| Field | Meaning |
+|---|---|
+| `is_truncated` | `finish_reason == "length"` — independent of `failure_type` |
+| `repetition_ratio` | `1 - (unique 4-grams / total 4-grams)` — `grading.compute_repetition_ratio()`, computed for every response (correct ones too, to support threshold calibration) |
+| `degeneration_candidate` | `repetition_ratio >= REPETITION_DEGENERATION_THRESHOLD` — only ever `True` for `reason`/`direct` stages (see caution below) |
+| `failure_type` | principal failure classification (still one value, but no longer conflates truncation with degeneration) |
+
+Example: a response that loops into repetition and then exhausts its
+token budget produces `{"failure_type": "repetition_degeneration",
+"is_truncated": true, "repetition_ratio": 0.74, "degeneration_candidate":
+true, "is_correct": false}` — both facts preserved.
+
+**Classification precedence** in `grading.classify_result()` (first match
+wins):
+1. Infrastructure/API failure (exception — no response at all)
+2. Parser/internal evaluator failure (our own code broke, not the model's fault)
+3. Translation-stage validation (`stage == "translate"` is fully self-contained)
+4. Refusal
+5. Repetition degeneration (`reason`/`direct` stages only)
+6. Non-degenerate truncation
+7. Missing answer
+8. Answer format and substantive correctness
+
+Repetition is checked *before* truncation — a prior version of this
+function checked `finish_reason == "length"` first, so every degenerating-
+then-truncated response was misclassified as plain `TRUNCATION` even when
+the repetition was the evident cause.
+
+**Degeneration is auto-classified only for `reason`/`direct` stages, never
+`translate`.** Applying it to the translate stage risked a false positive
+blocking the subsequent reasoning stage from running at all (staged pivots
+check the translate record's `failure_type` against `TRANSLATION_COMPLETED`
+before proceeding — see section 1). Translation rows still get
+`repetition_ratio` recorded as a diagnostic, just never an automatic
+degeneration classification.
+
+**`REPETITION_DEGENERATION_THRESHOLD` (currently `0.5`) is a PLACEHOLDER,
+not yet calibrated from real data.** Per the pilot exit criteria, inspect
+`text_track/scripts/inspect_repetition_scores.py`'s output against a real
+run — known/suspected degenerate responses, normal Ilokano responses,
+normal English responses, and long-but-legitimate reasoning — before
+preregistering a final value ahead of the full run. Automatic detection is
+a candidate flag; treat any reported degeneration rate as needing human
+confirmation via the annotation template (section 9) until then.
+
+**`is_correct` semantics** (all `ClassificationResult`/`ResultRecord`
+fields):
+
+| Outcome | `is_correct` |
+|---|---|
+| Correct answer | `True` |
+| Wrong answer | `False` |
+| Truncation | `False` |
+| Repetition degeneration | `False` |
+| Refusal | `False` |
+| Missing answer | `False` |
+| Invalid answer format | `False` |
+| Translation stage | `None` |
+| Infrastructure/API failure | `None` |
+| Parser/internal evaluator failure | `None` |
+
+A model-generated response that fails to complete the task is incorrect —
+truncating, degenerating, refusing, or omitting the answer are all things
+the model did, not unknowns. `None` means correctness genuinely could not
+be evaluated: no response exists at all (infra failure), our own code
+broke before grading could happen (parser failure), or the row is a
+translation-stage row with no canonical answer to grade against.
 
 ## 4. Prompts
 
@@ -373,6 +449,10 @@ completed run's result file and writes
   direct-answer controls have a language-neutral canonical answer and no
   rationale, so no rationale-language judgment
   applies to them).
+- Also surfaced from the record (context, not re-derived):
+  `is_truncated`, `repetition_ratio`, `degeneration_candidate` — so an
+  annotator reviewing a flagged case doesn't have to cross-reference the
+  raw JSONL separately.
 - Left blank for a human annotator: `rationale_present` (deliberately
   **not** auto-derived — `has_text_beyond_answer` is a hint, not a
   determination; a response can have leftover text that still isn't a real
@@ -380,12 +460,16 @@ completed run's result file and writes
   `noncompliant` / `uncertain`), `translation_faithfulness` (`accurate` /
   `minor_error` / `major_error` / `unusable`), `translation_error_type`
   (`none` / `lexical` / `morphological` / `semantic` / `omission` /
-  `addition`), `annotation_notes`, `annotator`.
+  `addition`), `degeneration_type` — the human confirmation for
+  `degeneration_candidate` (`none` / `lexical_repetition` /
+  `phrase_or_sentence_repetition` / `reasoning_loop` / `other` /
+  `uncertain`), `annotation_notes`, `annotator`.
 
 Annotations are joined back against the inference data during analysis by
-the same key tuple — `analyze.py`'s eventual rewrite (already a known
-deferred item, section 11) will need to perform that join, not read
-annotations as if they were part of the inference schema.
+the same key tuple — `analyze.py` reads the flat six-condition schema
+directly (see section 11) but does not itself perform this join; a future
+pass would need to read the annotation CSV separately and join on
+`(run_id, item_id, model_key, condition_key, stage)`.
 
 ## 10. Pilot requirements before full-scale runs
 
@@ -417,12 +501,11 @@ just aggregate pass/fail) should the full 1,000-item runs proceed.
 ## 11. Non-goals (still deferred)
 
 - Does **not** run the full 1,000-item experiment against real APIs yet —
-  that requires the source-diverse pilot (section 10) to pass first.
+  that requires (1) the source-diverse pilot (section 10) to pass, and
+  (2) `REPETITION_DEGENERATION_THRESHOLD` to be confirmed/preregistered
+  from real pilot data (see section 3), neither of which has happened yet.
   Everything above is implemented and tested against a fake model client
-  only, aside from the single-item exploratory pilot that motivated `v2`.
-- Does **not** modify `analyze.py` — its rewrite for the new per-item×model×
-  condition×stage result schema, including the annotation join (section 9),
-  is a separate, later phase.
+  only, aside from the exploratory pilots that motivated `v2`-`v4`.
 - Does **not** attempt to resolve the provenance gaps in section 7.
 - Does **not** implement the actual HPC/vLLM deployment for the Qwen
   models — only the client code path, gated on `HPC_VLLM_BASE_URL` being
@@ -433,3 +516,15 @@ just aggregate pass/fail) should the full 1,000-item runs proceed.
   tokenizer is loadable (Anthropic, OpenAI, gated repos). Exact native
   tokenization for Claude/GPT-5.2/Llama is not implemented — those always
   use the tiktoken approximation.
+- `analyze.py` was rewritten for the flat six-condition schema (accuracy,
+  truncation/degeneration rates, primary paired McNemar comparisons,
+  per-source breakdowns — section 11 below is the updated non-goals list;
+  the annotation-CSV join described in section 9 is NOT implemented in
+  `analyze.py` itself and remains a later step.
+- Does **not** implement the recovery analysis (`A_II` vs `A_IE`
+  stable/recovered/regressed/persistent-failure categories), the
+  stage-localization analysis combining translation fidelity with `A_EE`/
+  `A_IE` outcomes, or the tokenization-vs-error-category association
+  analysis from the original conference plan's Phase 7 — `analyze.py`
+  currently covers accuracy, truncation/degeneration rates, and the
+  primary paired comparisons only.

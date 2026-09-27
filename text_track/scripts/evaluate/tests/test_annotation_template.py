@@ -53,6 +53,19 @@ class BuildAnnotationRowsTests(unittest.TestCase):
         rows = gat.build_annotation_rows([_record(condition_key="A_II", stage="reason")])
         self.assertEqual(rows[0]["requested_language"], "ilo")
 
+    def test_truncation_and_repetition_fields_surfaced_from_record(self):
+        rows = gat.build_annotation_rows([_record(
+            is_truncated=True, repetition_ratio=0.74, degeneration_candidate=True,
+            failure_type="repetition_degeneration",
+        )])
+        self.assertTrue(rows[0]["is_truncated"])
+        self.assertEqual(rows[0]["repetition_ratio"], 0.74)
+        self.assertTrue(rows[0]["degeneration_candidate"])
+
+    def test_degeneration_type_is_blank_human_column(self):
+        rows = gat.build_annotation_rows([_record(degeneration_candidate=True)])
+        self.assertEqual(rows[0]["degeneration_type"], "")
+
 
 if __name__ == "__main__":
     unittest.main()

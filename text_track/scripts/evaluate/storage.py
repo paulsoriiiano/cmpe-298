@@ -21,7 +21,7 @@ RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "eval_runs")
 # cross-run resumption (a fresh run_id reusing another run's completed work via
 # ResumeIndex) could silently treat an old-semantics record as equivalent to a
 # new-semantics one.
-EVALUATOR_VERSION = "evaluator_v3"
+EVALUATOR_VERSION = "evaluator_v4"
 
 
 @dataclass
@@ -46,6 +46,9 @@ class ResultRecord:
     is_correct: bool | None
     format_compliant: bool | None
     failure_type: str
+    is_truncated: bool | None          # finish_reason == "length" — independent of failure_type
+    repetition_ratio: float | None      # compute_repetition_ratio() — recorded for every response
+    degeneration_candidate: bool | None  # repetition_ratio >= threshold; only True for reason/direct stages
     input_tokens: int | None          # exact, from the provider's usage object
     output_tokens: int | None         # exact, from the provider's usage object
     question_en_tokens: int | None     # model-native tokenizer count where available — see tokenization.py

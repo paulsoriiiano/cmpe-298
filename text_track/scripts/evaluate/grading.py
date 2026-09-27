@@ -12,9 +12,17 @@ found, but tracks tag presence separately as `format_compliant` — a fallback-d
 correct answer is still semantically CORRECT, just format-noncompliant.
 """
 import re
+from dataclasses import dataclass
 from enum import Enum
 
 from .models import ModelResponse
+
+# NOT YET CALIBRATED FROM REAL DATA. This is a placeholder pending manual inspection of a
+# real pilot run's repetition_ratio distribution (known-degenerate responses vs. normal
+# Ilokano/English/long-legitimate-reasoning responses) via
+# text_track/scripts/inspect_repetition_scores.py — see PROTOCOL.md section 3. Do not treat
+# this value as preregistered; confirm/adjust it against real pilot data before the full run.
+REPETITION_DEGENERATION_THRESHOLD = 0.5
 
 
 class FailureType(str, Enum):
@@ -114,18 +122,22 @@ def grade(extracted: str | None, canonical_answer: str) -> bool:
     return _matches(extracted, canonical_answer)
 
 
-def _repetition_ratio(text: str, n: int = 4) -> float:
-    """Fraction of n-grams (by whitespace token) that recur more than once. High values
-    indicate the model looped/degenerated rather than produced varied text."""
+def compute_repetition_ratio(text: str | None, n: int = 4) -> float:
+    """1 - (unique n-grams / total n-grams), by whitespace token, using 4-grams by default.
+    0.0 means every n-gram is distinct (no repetition); values approaching 1.0 mean the
+    output is mostly the same n-gram repeated. Computed for every response (not just ones
+    already suspected of degenerating) so a threshold can be chosen from the real
+    distribution — see REPETITION_DEGENERATION_THRESHOLD and
+    text_track/scripts/inspect_repetition_scores.py."""
+    if not text:
+        return 0.0
     tokens = text.split()
-    if len(tokens) < n * 2:
+    if len(tokens) < n:
         return 0.0
     ngrams = [tuple(tokens[i:i + n]) for i in range(len(tokens) - n + 1)]
-    seen = {}
-    for g in ngrams:
-        seen[g] = seen.get(g, 0) + 1
-    repeated = sum(1 for count in seen.values() if count > 1)
-    return repeated / len(seen) if seen else 0.0
+    total = len(ngrams)
+    unique = len(set(ngrams))
+    return 1 - (unique / total) if total else 0.0
 
 
 def extract_fallback_answer(text: str | None, source: str | None) -> str | None:
@@ -216,6 +228,17 @@ def looks_like_translation_format_failure(translated_text: str) -> bool:
     return False
 
 
+@dataclass(frozen=True)
+class ClassificationResult:
+    failure_type: FailureType
+    extracted_answer: str | None
+    is_correct: bool | None
+    format_compliant: bool | None
+    is_truncated: bool | None       # finish_reason == "length" — independent of failure_type
+    repetition_ratio: float | None   # compute_repetition_ratio(response.text) — always recorded
+    degeneration_candidate: bool | None  # repetition_ratio >= threshold; only ever True for reason/direct
+
+
 def classify_result(
     *,
     response: ModelResponse | None,
@@ -223,43 +246,87 @@ def classify_result(
     canonical_answer: str | None,
     source: str | None,
     stage: str,
-) -> tuple[FailureType, str | None, bool | None, bool | None]:
-    """Classify a completed API call into a FailureType.
+) -> ClassificationResult:
+    """Classify a completed API call. Precedence (first match wins):
+    1. Infrastructure/API failure (exception)
+    2. Parser/internal evaluator failure (our own code broke, not the model's fault)
+    3. Translation-stage validation (stage == "translate" is fully self-contained)
+    4. Refusal
+    5. Repetition degeneration (reason/direct stages only — see below)
+    6. Non-degenerate truncation
+    7. Missing answer
+    8. Answer format and substantive correctness
 
-    Returns (failure_type, extracted_answer, is_correct, format_compliant).
-    extracted_answer/is_correct are None for stages/failures where grading doesn't apply
-    (translate stage, infra failure, parser failure). format_compliant tracks whether the
-    required <answer> tag was actually present — independent of correctness, since a
-    fallback-extracted answer (e.g. from \\boxed{...}) can be semantically CORRECT while
-    still being format-noncompliant. format_compliant is None where the tag contract isn't
-    applicable (translate stage, infra/parser failure).
+    is_correct semantics: True/False for anything the model actually produced (a wrong
+    answer, a truncated response, a degenerate loop, a refusal, a missing/malformed answer
+    are all False — the model failed to complete the task, which IS an incorrect outcome).
+    None means correctness genuinely couldn't be evaluated: translation-stage rows (no
+    canonical answer applies), infrastructure failures (no response at all), and parser
+    failures (our own bug, not a judgment about the model's output).
+
+    is_truncated/repetition_ratio are recorded independently of failure_type whenever a
+    response exists — e.g. a record can be failure_type=repetition_degeneration with
+    is_truncated=True, preserving both facts instead of collapsing them into one field.
+    degeneration_candidate (repetition_ratio >= REPETITION_DEGENERATION_THRESHOLD) is only
+    ever True for reason/direct stages: applying it to the translate stage risks a false
+    positive blocking the subsequent reasoning stage from running at all (see run.py's
+    staged-pivot check against TRANSLATION_COMPLETED), so translation rows only ever get the
+    score recorded, never an automatic degeneration classification.
     """
     if exception is not None:
-        return FailureType.INFRASTRUCTURE_API_FAILURE, None, None, None
+        return ClassificationResult(
+            failure_type=FailureType.INFRASTRUCTURE_API_FAILURE, extracted_answer=None,
+            is_correct=None, format_compliant=None, is_truncated=None,
+            repetition_ratio=None, degeneration_candidate=None,
+        )
 
     assert response is not None
-
-    if response.finish_reason == "length":
-        return FailureType.TRUNCATION, None, None, False
-
-    if _REFUSAL_PATTERNS.search(response.text or ""):
-        return FailureType.REFUSAL, None, None, False
-
-    if _repetition_ratio(response.text or "") > 0.3:
-        return FailureType.REPETITION_DEGENERATION, None, None, False
-
-    if stage == "translate":
-        if looks_like_translation_format_failure(response.text):
-            return FailureType.TRANSLATION_FORMAT_FAILURE, None, None, None
-        # TRANSLATION_COMPLETED means only: the API call succeeded, a nonempty translation
-        # candidate came back, and it didn't contain an answer tag. It does NOT mean the
-        # translation is linguistically correct or faithful — that's a separate manual
-        # annotation pass (see generate_annotation_template.py / PROTOCOL.md section 9),
-        # not something this heuristic can judge.
-        return FailureType.TRANSLATION_COMPLETED, None, None, None
+    text = response.text or ""
+    is_truncated = response.finish_reason == "length"
+    repetition_ratio = compute_repetition_ratio(text)
+    degeneration_candidate = (
+        stage in ("reason", "direct") and repetition_ratio >= REPETITION_DEGENERATION_THRESHOLD
+    )
 
     try:
-        text = response.text or ""
+        if stage == "translate":
+            if looks_like_translation_format_failure(response.text):
+                failure_type = FailureType.TRANSLATION_FORMAT_FAILURE
+            else:
+                # TRANSLATION_COMPLETED means only: the API call succeeded, a nonempty
+                # translation candidate came back, and it didn't contain an answer tag. It
+                # does NOT mean the translation is linguistically correct or faithful —
+                # that's a separate manual annotation pass (generate_annotation_template.py
+                # / PROTOCOL.md section 9), not something this heuristic can judge.
+                failure_type = FailureType.TRANSLATION_COMPLETED
+            return ClassificationResult(
+                failure_type=failure_type, extracted_answer=None, is_correct=None,
+                format_compliant=None, is_truncated=is_truncated,
+                repetition_ratio=repetition_ratio, degeneration_candidate=False,
+            )
+
+        # reason / direct stages from here on.
+        if _REFUSAL_PATTERNS.search(text):
+            return ClassificationResult(
+                failure_type=FailureType.REFUSAL, extracted_answer=None, is_correct=False,
+                format_compliant=False, is_truncated=is_truncated,
+                repetition_ratio=repetition_ratio, degeneration_candidate=degeneration_candidate,
+            )
+
+        if degeneration_candidate:
+            return ClassificationResult(
+                failure_type=FailureType.REPETITION_DEGENERATION, extracted_answer=None,
+                is_correct=False, format_compliant=False, is_truncated=is_truncated,
+                repetition_ratio=repetition_ratio, degeneration_candidate=True,
+            )
+
+        if is_truncated:
+            return ClassificationResult(
+                failure_type=FailureType.TRUNCATION, extracted_answer=None, is_correct=False,
+                format_compliant=False, is_truncated=True, repetition_ratio=repetition_ratio,
+                degeneration_candidate=degeneration_candidate,
+            )
+
         tagged = extract_answer(text)
         if tagged is not None:
             extracted = tagged
@@ -269,7 +336,11 @@ def classify_result(
             format_compliant = False
 
         if extracted is None:
-            return FailureType.MISSING_ANSWER, None, None, False
+            return ClassificationResult(
+                failure_type=FailureType.MISSING_ANSWER, extracted_answer=None,
+                is_correct=False, format_compliant=False, is_truncated=is_truncated,
+                repetition_ratio=repetition_ratio, degeneration_candidate=degeneration_candidate,
+            )
 
         shape = _ANSWER_SHAPE_BY_SOURCE.get(source) if source else None
 
@@ -280,7 +351,11 @@ def classify_result(
         # ballpark (e.g. a sentence where a bare letter was expected) fails here.
         lenient_class = _semantic_class(extracted)
         if shape is not None and lenient_class is not None and not shape.match(lenient_class.upper()):
-            return FailureType.INVALID_ANSWER_FORMAT, extracted, False, False
+            return ClassificationResult(
+                failure_type=FailureType.INVALID_ANSWER_FORMAT, extracted_answer=extracted,
+                is_correct=False, format_compliant=False, is_truncated=is_truncated,
+                repetition_ratio=repetition_ratio, degeneration_candidate=degeneration_candidate,
+            )
 
         # Strict check (via normalize_answer, no Ilokano mapping): does the LITERAL content
         # match the canonical vocabulary the format contract requires? "Wen"/"Saan" fail
@@ -293,8 +368,15 @@ def classify_result(
         format_compliant = format_compliant and strict_ok
 
         is_correct = grade(extracted, canonical_answer) if canonical_answer is not None else False
-        if is_correct:
-            return FailureType.CORRECT, extracted, True, format_compliant
-        return FailureType.SUBSTANTIVELY_INCORRECT, extracted, False, format_compliant
+        failure_type = FailureType.CORRECT if is_correct else FailureType.SUBSTANTIVELY_INCORRECT
+        return ClassificationResult(
+            failure_type=failure_type, extracted_answer=extracted, is_correct=is_correct,
+            format_compliant=format_compliant, is_truncated=is_truncated,
+            repetition_ratio=repetition_ratio, degeneration_candidate=degeneration_candidate,
+        )
     except Exception:  # noqa: BLE001 - our own bug, not the model's/API's fault
-        return FailureType.PARSER_FAILURE, None, None, None
+        return ClassificationResult(
+            failure_type=FailureType.PARSER_FAILURE, extracted_answer=None, is_correct=None,
+            format_compliant=None, is_truncated=is_truncated, repetition_ratio=repetition_ratio,
+            degeneration_candidate=degeneration_candidate,
+        )
