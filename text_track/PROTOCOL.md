@@ -5,8 +5,11 @@
   resumption/tokenization/annotation hardening 2026-09-25; retry/timeout policy and
   truncation/degeneration separation 2026-09-26 — `evaluator_v4`)
 - Pinned dataset version: `dataset_conference_v1.1` (see `data/dataset_manifest.json`)
-- **STATUS: implemented in `text_track/scripts/evaluate/`, not yet piloted. No real
-  model API calls have been made under `protocol_v2` (only fake-client tests so far).**
+- **STATUS: implemented in `text_track/scripts/evaluate/`. Real pilot API calls have
+  been made under `protocol_v2` against `qwen_3_6_27b` and `qwen_sealion_v4_5_27b_it` on
+  HPC — the HPC endpoint is configured and reachable (see section 5's model table). This
+  is pilot-scale evidence that the pipeline works end-to-end against real models, not yet
+  the full-scale run.**
 
 **Why v2 exists**: a real pilot call to `qwen_3_6_27b` under `protocol_v1` surfaced two
 problems this revision fixes: (1) the reasoning prompts were satisfiable with only a tag
@@ -247,8 +250,8 @@ mistaken for new-wording ones on resume.
 | `claude_sonnet_4_6` | `claude-sonnet-4-6` | 0.0 | 2048 | Anthropic | ready |
 | `llama_3_8b` | `meta-llama/Meta-Llama-3-8B-Instruct` | 0.0 | 2048 | HF router | ready |
 | `gpt_5_2_thinking` | `gpt-5.2-thinking` | n/a (reasoning model) | 2048 | OpenAI direct API | ready |
-| `qwen_3_6_27b` | `qwen3.6-27b` | 0.0 | 2048 | HPC via vLLM | **blocked** — model weights still being staged on HPC; endpoint not yet configured (`HPC_VLLM_BASE_URL`) |
-| `qwen_sealion_v4_5_27b_it` | `qwen-sealion-v4.5-27b-it` | 0.0 | 2048 | HPC via vLLM | **blocked**, same reason |
+| `qwen_3_6_27b` | `qwen3.6-27b` | 0.0 | 2048 | HPC via vLLM | ready — weights staged, `HPC_VLLM_BASE_URL` configured, successful real pilot calls made |
+| `qwen_sealion_v4_5_27b_it` | `qwen-sealion-v4.5-27b-it` | 0.0 | 2048 | HPC via vLLM | ready, same as above |
 
 The three non-HPC models are implemented and callable today (`text_track/scripts/evaluate/models.py`).
 The two Qwen models reuse the same OpenAI-compatible client code path (vLLM's
