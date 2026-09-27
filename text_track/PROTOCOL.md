@@ -289,6 +289,21 @@ Report both pooled (all 1,000 items) and per-source breakdowns, since chance
 baselines and difficulty differ substantially between GSM8K (open-ended
 numeric) and the multiple-choice/binary sources.
 
+**Multiple-comparison correction scope**: Holm step-down correction is
+applied *per model*, across that model's 3 primary comparisons above — not
+pooled across models. Each model constitutes its own hypothesis family; a
+p-value from one model never affects another model's adjusted significance
+threshold. This is a deliberate, pre-registered choice (implemented in
+`analyze.py`'s `main()`, one `holm_adjust()` call per model).
+
+**Per-source statistical testing**: per-source results are **descriptive
+accuracy only** (`analyze.py` section 4) — no per-source paired McNemar test
+is computed. Several sources have small cells (e.g. `bbh_causal_judgement`
+n=15/50), where an exact binomial test has very low power; a
+non-significant per-source result there would be uninformative rather than
+a genuine null finding. The pre-registered primary inferential comparisons
+are the pooled ones above, not per-source tests.
+
 ## 7. Known provenance gaps (documented, not resolved)
 
 These are carried over from `data/audit_summary.md` and are **not**
@@ -321,7 +336,7 @@ changed model configuration (a different vLLM precision, an updated
 checkpoint) can never be silently treated as equivalent to an older run's
 results, the same way `prompt_version`/`protocol_version` protect against a
 prompt-wording change being silently reused. `evaluator_version`
-(`storage.EVALUATOR_VERSION`, currently `"evaluator_v3"`) exists as a
+(`storage.EVALUATOR_VERSION`, currently `"evaluator_v4"`) exists as a
 **separate** axis from `protocol_version`/`prompt_version`: a grading,
 tokenization, or retry/timeout-behavior fix (e.g. the answer-only
 detection fix, the rationale-token stripping change, or the explicit
