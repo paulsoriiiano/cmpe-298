@@ -148,6 +148,49 @@ class RunManifestTests(unittest.TestCase):
             manifest["model_settings"]["claude_sonnet_4_6"]["model_id"], "claude-sonnet-4-6",
         )
 
+    def test_manifest_includes_evaluator_settings(self):
+        from .. import grading
+        path = write_run_manifest(
+            run_id="run-1", dataset_version="dataset_conference_v1.1",
+            protocol_version="protocol_v2", conditions=["A_EE"],
+            models=["claude_sonnet_4_6"], total_planned_units=1, runs_dir=self.tmp_dir,
+        )
+        with open(path) as f:
+            manifest = json.load(f)
+        self.assertEqual(
+            manifest["evaluator_settings"]["repetition_degeneration_threshold"],
+            grading.REPETITION_DEGENERATION_THRESHOLD,
+        )
+        self.assertEqual(
+            manifest["evaluator_settings"]["repetition_ngram_size"], grading.REPETITION_NGRAM_SIZE,
+        )
+
+    def test_same_run_id_different_repetition_threshold_raises(self):
+        # A threshold change alters failure_type/is_correct for affected records even if
+        # EVALUATOR_VERSION wasn't bumped for this specific restart — evaluator_settings is
+        # recorded as manifest data precisely so this is caught, not just left as a code
+        # constant someone could change without noticing the resumption implications.
+        from .. import storage
+        with mock.patch.object(storage, "_evaluator_settings", return_value={
+            "repetition_metric": "1_unique_over_total_4gram", "repetition_ngram_size": 4,
+            "repetition_degeneration_threshold": 0.30,
+        }):
+            write_run_manifest(
+                run_id="run-1", dataset_version="dataset_conference_v1.1",
+                protocol_version="protocol_v2", conditions=["A_EE"],
+                models=["claude_sonnet_4_6"], total_planned_units=1, runs_dir=self.tmp_dir,
+            )
+        with mock.patch.object(storage, "_evaluator_settings", return_value={
+            "repetition_metric": "1_unique_over_total_4gram", "repetition_ngram_size": 4,
+            "repetition_degeneration_threshold": 0.50,  # changed!
+        }):
+            with self.assertRaises(ValueError):
+                write_run_manifest(
+                    run_id="run-1", dataset_version="dataset_conference_v1.1",
+                    protocol_version="protocol_v2", conditions=["A_EE"],
+                    models=["claude_sonnet_4_6"], total_planned_units=1, runs_dir=self.tmp_dir,
+                )
+
     def test_resuming_from_run_ids_recorded(self):
         path = write_run_manifest(
             run_id="run-1", dataset_version="dataset_conference_v1.1",

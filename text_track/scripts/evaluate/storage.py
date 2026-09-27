@@ -9,6 +9,8 @@ import json
 import os
 from dataclasses import asdict, dataclass, field
 
+from .grading import REPETITION_DEGENERATION_THRESHOLD, REPETITION_NGRAM_SIZE
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "eval_runs")
 
@@ -21,7 +23,7 @@ RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "eval_runs")
 # cross-run resumption (a fresh run_id reusing another run's completed work via
 # ResumeIndex) could silently treat an old-semantics record as equivalent to a
 # new-semantics one.
-EVALUATOR_VERSION = "evaluator_v4"
+EVALUATOR_VERSION = "evaluator_v5"
 
 
 @dataclass
@@ -46,7 +48,7 @@ class ResultRecord:
     is_correct: bool | None
     format_compliant: bool | None
     failure_type: str
-    is_truncated: bool | None          # finish_reason == "length" — independent of failure_type
+    is_truncated: bool | None          # finish_reason in grading.TRUNCATION_FINISH_REASONS — independent of failure_type
     repetition_ratio: float | None      # compute_repetition_ratio() — recorded for every response
     degeneration_candidate: bool | None  # repetition_ratio >= threshold; only True for reason/direct stages
     input_tokens: int | None          # exact, from the provider's usage object
@@ -217,11 +219,23 @@ def _git_commit() -> str | None:
 # code produced the "same" result schema, which is exactly the kind of silent drift this
 # manifest exists to catch. planned_item_ids_by_condition is included: a restart that
 # selects a different item set for the same run_id would silently mix two different
-# experiments' data into one result file.
+# experiments' data into one result file. evaluator_settings is included: a threshold
+# change (e.g. REPETITION_DEGENERATION_THRESHOLD) changes failure_type/is_correct for
+# affected records even though EVALUATOR_VERSION might not have been bumped for this
+# specific restart — recording it here as data (not just a code constant) means a restart
+# under a changed threshold is caught the same way as any other incompatible setting.
 _MANIFEST_COMPATIBILITY_FIELDS = (
     "dataset_version", "protocol_version", "evaluator_version", "conditions", "models",
-    "model_settings", "git_commit", "planned_item_ids_by_condition",
+    "model_settings", "git_commit", "planned_item_ids_by_condition", "evaluator_settings",
 )
+
+
+def _evaluator_settings() -> dict:
+    return {
+        "repetition_metric": f"1_unique_over_total_{REPETITION_NGRAM_SIZE}gram",
+        "repetition_ngram_size": REPETITION_NGRAM_SIZE,
+        "repetition_degeneration_threshold": REPETITION_DEGENERATION_THRESHOLD,
+    }
 
 
 def write_run_manifest(
@@ -247,10 +261,11 @@ def write_run_manifest(
 
     If a manifest already exists for this run_id (e.g. restarting a failed SLURM job under
     the same predetermined run_id — see __main__.py's --run-id), its dataset/protocol
-    version, conditions, models, model_settings, git_commit, and item selection must match
-    exactly, or this raises rather than silently overwriting a manifest that no longer
-    describes what's actually in the result JSONL for that run_id. On a compatible restart,
-    the original created_at is preserved and last_resumed_at is set to now.
+    version, conditions, models, model_settings, git_commit, item selection, and
+    evaluator_settings (repetition metric/threshold — see grading.py) must match exactly,
+    or this raises rather than silently overwriting a manifest that no longer describes
+    what's actually in the result JSONL for that run_id. On a compatible restart, the
+    original created_at is preserved and last_resumed_at is set to now.
     """
     import datetime
 
@@ -263,6 +278,7 @@ def write_run_manifest(
         "conditions": conditions, "models": models, "model_settings": model_settings or {},
         "git_commit": _git_commit(),
         "planned_item_ids_by_condition": planned_item_ids_by_condition or {},
+        "evaluator_settings": _evaluator_settings(),
     }
 
     created_at = datetime.datetime.now(datetime.timezone.utc).isoformat()

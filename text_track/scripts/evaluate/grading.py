@@ -17,12 +17,19 @@ from enum import Enum
 
 from .models import ModelResponse
 
-# NOT YET CALIBRATED FROM REAL DATA. This is a placeholder pending manual inspection of a
-# real pilot run's repetition_ratio distribution (known-degenerate responses vs. normal
-# Ilokano/English/long-legitimate-reasoning responses) via
-# text_track/scripts/inspect_repetition_scores.py — see PROTOCOL.md section 3. Do not treat
-# this value as preregistered; confirm/adjust it against real pilot data before the full run.
-REPETITION_DEGENERATION_THRESHOLD = 0.5
+# Calibrated from 80 real pilot outputs (qwen_3_6_27b + qwen_sealion_v4_5_27b_it,
+# inspect_repetition_scores.py) — see PROTOCOL.md section 3 for the full rationale. Seven
+# manually confirmed degenerate outputs scored 0.340-0.887; the remaining 73 non-truncated
+# outputs scored 0.000-0.244 (highest legitimate reasoning output: 0.214). 0.30 sits inside
+# that observed gap. Changing this value changes failure_type/is_correct for affected
+# records — see EVALUATOR_VERSION and evaluator_settings in storage.py's manifest, which
+# must be bumped/updated alongside any future change to this constant.
+REPETITION_DEGENERATION_THRESHOLD = 0.30
+
+# The n-gram size compute_repetition_ratio() uses by default — pulled out as a named
+# constant (rather than left as an inline default argument) so storage.py's manifest can
+# record which n-gram size the calibrated threshold above corresponds to.
+REPETITION_NGRAM_SIZE = 4
 
 # Anthropic's Messages API uses "max_tokens" for its truncation finish_reason; OpenAI-style
 # APIs (OpenAI direct, HF router, vLLM) use "length". Checking only "length" silently missed
@@ -127,7 +134,7 @@ def grade(extracted: str | None, canonical_answer: str) -> bool:
     return _matches(extracted, canonical_answer)
 
 
-def compute_repetition_ratio(text: str | None, n: int = 4) -> float:
+def compute_repetition_ratio(text: str | None, n: int = REPETITION_NGRAM_SIZE) -> float:
     """1 - (unique n-grams / total n-grams), by whitespace token, using 4-grams by default.
     0.0 means every n-gram is distinct (no repetition); values approaching 1.0 mean the
     output is mostly the same n-gram repeated. Computed for every response (not just ones

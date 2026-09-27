@@ -4,6 +4,7 @@ extraction regression tests for responses that skip the required <answer> tag.
 No network calls: uses canned ModelResponse objects only (see fakes.CANNED).
 """
 import unittest
+from unittest import mock
 
 from ..grading import (
     REPETITION_DEGENERATION_THRESHOLD, TRUNCATION_FINISH_REASONS, FailureType, classify_result,
@@ -242,9 +243,37 @@ class ClassifyResultTests(unittest.TestCase):
 
 
 class DegenerationThresholdTests(unittest.TestCase):
-    """REPETITION_DEGENERATION_THRESHOLD is NOT YET CALIBRATED from real pilot data (see
-    grading.py's module-level comment and inspect_repetition_scores.py) — these tests only
-    verify the boundary/comparison logic itself (>=), not the specific threshold value."""
+    """REPETITION_DEGENERATION_THRESHOLD is calibrated at 0.30 from 80 real pilot outputs
+    (see grading.py's module-level comment, PROTOCOL.md section 3, and
+    inspect_repetition_scores.py). These tests verify both the exact calibrated value and
+    the boundary/comparison logic (>=)."""
+
+    def test_threshold_is_the_calibrated_value(self):
+        self.assertEqual(REPETITION_DEGENERATION_THRESHOLD, 0.30)
+
+    def test_ratio_at_threshold_is_a_degeneration_candidate(self):
+        with mock.patch(
+            "text_track.scripts.evaluate.grading.compute_repetition_ratio",
+            return_value=REPETITION_DEGENERATION_THRESHOLD,
+        ):
+            result = classify_result(
+                response=canned_response("some text"), exception=None,
+                canonical_answer="109", source="gsm8k", stage="reason",
+            )
+        self.assertTrue(result.degeneration_candidate)
+        self.assertEqual(result.failure_type, FailureType.REPETITION_DEGENERATION)
+
+    def test_ratio_just_below_threshold_is_not_a_degeneration_candidate(self):
+        with mock.patch(
+            "text_track.scripts.evaluate.grading.compute_repetition_ratio",
+            return_value=REPETITION_DEGENERATION_THRESHOLD - 0.001,
+        ):
+            result = classify_result(
+                response=canned_response("some text"), exception=None,
+                canonical_answer="109", source="gsm8k", stage="reason",
+            )
+        self.assertFalse(result.degeneration_candidate)
+        self.assertNotEqual(result.failure_type, FailureType.REPETITION_DEGENERATION)
 
     def test_ratio_exactly_at_threshold_is_a_candidate(self):
         self.assertGreaterEqual(REPETITION_DEGENERATION_THRESHOLD, 0.0)
