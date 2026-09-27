@@ -6,8 +6,8 @@ No network calls: uses canned ModelResponse objects only (see fakes.CANNED).
 import unittest
 
 from ..grading import (
-    REPETITION_DEGENERATION_THRESHOLD, FailureType, classify_result, compute_repetition_ratio,
-    has_text_beyond_answer, strip_answer_content,
+    REPETITION_DEGENERATION_THRESHOLD, TRUNCATION_FINISH_REASONS, FailureType, classify_result,
+    compute_repetition_ratio, has_text_beyond_answer, strip_answer_content,
 )
 from .fakes import CANNED, canned_response
 
@@ -36,6 +36,28 @@ class ClassifyResultTests(unittest.TestCase):
         self.assertIs(result.is_correct, False)  # model failed to complete the task
         self.assertTrue(result.is_truncated)
         self.assertFalse(result.degeneration_candidate)
+
+    def test_openai_style_length_finish_reason_is_truncated(self):
+        response = canned_response("cut off mid-sen", finish_reason="length")
+        result = classify_result(
+            response=response, exception=None, canonical_answer="109",
+            source="gsm8k", stage="reason",
+        )
+        self.assertTrue(result.is_truncated)
+        self.assertEqual(result.failure_type, FailureType.TRUNCATION)
+
+    def test_anthropic_style_max_tokens_finish_reason_is_truncated(self):
+        # Regression: Anthropic's Messages API uses "max_tokens", not "length", for
+        # truncation — checking only "length" silently missed every Anthropic truncation.
+        response = canned_response("cut off mid-sen", finish_reason="max_tokens")
+        result = classify_result(
+            response=response, exception=None, canonical_answer="109",
+            source="gsm8k", stage="reason",
+        )
+        self.assertTrue(result.is_truncated)
+        self.assertEqual(result.failure_type, FailureType.TRUNCATION)
+        self.assertIn("max_tokens", TRUNCATION_FINISH_REASONS)
+        self.assertIn("length", TRUNCATION_FINISH_REASONS)
 
     def test_refusal_is_incorrect(self):
         result = classify_result(

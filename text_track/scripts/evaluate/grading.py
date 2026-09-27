@@ -24,6 +24,11 @@ from .models import ModelResponse
 # this value as preregistered; confirm/adjust it against real pilot data before the full run.
 REPETITION_DEGENERATION_THRESHOLD = 0.5
 
+# Anthropic's Messages API uses "max_tokens" for its truncation finish_reason; OpenAI-style
+# APIs (OpenAI direct, HF router, vLLM) use "length". Checking only "length" silently missed
+# every Anthropic truncation.
+TRUNCATION_FINISH_REASONS = {"length", "max_tokens"}
+
 
 class FailureType(str, Enum):
     CORRECT = "correct"
@@ -234,7 +239,7 @@ class ClassificationResult:
     extracted_answer: str | None
     is_correct: bool | None
     format_compliant: bool | None
-    is_truncated: bool | None       # finish_reason == "length" — independent of failure_type
+    is_truncated: bool | None       # finish_reason in TRUNCATION_FINISH_REASONS — independent of failure_type
     repetition_ratio: float | None   # compute_repetition_ratio(response.text) — always recorded
     degeneration_candidate: bool | None  # repetition_ratio >= threshold; only ever True for reason/direct
 
@@ -282,7 +287,7 @@ def classify_result(
 
     assert response is not None
     text = response.text or ""
-    is_truncated = response.finish_reason == "length"
+    is_truncated = response.finish_reason in TRUNCATION_FINISH_REASONS
     repetition_ratio = compute_repetition_ratio(text)
     degeneration_candidate = (
         stage in ("reason", "direct") and repetition_ratio >= REPETITION_DEGENERATION_THRESHOLD
