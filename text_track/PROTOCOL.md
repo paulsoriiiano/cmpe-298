@@ -3,7 +3,8 @@
 - Protocol version: `protocol_v2`
 - Date: 2026-09-23 (implementation status updated 2026-09-24; v2 revision 2026-09-25;
   resumption/tokenization/annotation hardening 2026-09-25; retry/timeout policy and
-  truncation/degeneration separation 2026-09-26 — `evaluator_v4`)
+  truncation/degeneration separation 2026-09-26 — `evaluator_v4`; repetition-threshold
+  calibration from real pilot data 2026-09-26 — `evaluator_v5`)
 - Pinned dataset version: `dataset_conference_v1.1` (see `data/dataset_manifest.json`)
 - **STATUS: implemented in `text_track/scripts/evaluate/`. Real pilot API calls have
   been made under `protocol_v2` against `qwen_3_6_27b` and `qwen_sealion_v4_5_27b_it` on
@@ -186,14 +187,26 @@ before proceeding — see section 1). Translation rows still get
 `repetition_ratio` recorded as a diagnostic, just never an automatic
 degeneration classification.
 
-**`REPETITION_DEGENERATION_THRESHOLD` (currently `0.5`) is a PLACEHOLDER,
-not yet calibrated from real data.** Per the pilot exit criteria, inspect
-`text_track/scripts/inspect_repetition_scores.py`'s output against a real
-run — known/suspected degenerate responses, normal Ilokano responses,
-normal English responses, and long-but-legitimate reasoning — before
-preregistering a final value ahead of the full run. Automatic detection is
-a candidate flag; treat any reported degeneration rate as needing human
-confirmation via the annotation template (section 9) until then.
+**`REPETITION_DEGENERATION_THRESHOLD` is calibrated at `0.30`** (evaluator_v5), from
+80 real pilot outputs (`qwen_3_6_27b` + `qwen_sealion_v4_5_27b_it`,
+`text_track/scripts/inspect_repetition_scores.py`, run 2026-09-26). Repetition was
+measured as \(1 - \frac{\text{unique 4-grams}}{\text{total 4-grams}}\). Seven manually
+inspected outputs exhibited clear lexical, phrasal, or reasoning-loop degeneration —
+all of them also truncated — with ratios ranging from `0.340` to `0.887`. The
+remaining 73 non-truncated outputs ranged from `0.000` to `0.244` (the highest
+legitimate long-reasoning output scored `0.214`). `0.30` sits inside that observed
+gap; the prior placeholder `0.50` would have missed two of the seven confirmed
+degenerate cases (`0.340`, `0.439`). This threshold is pooled across both models
+rather than calibrated separately per model.
+
+Automatic detection (`degeneration_candidate`) remains a candidate flag, not a
+confirmed classification — treat any reported degeneration rate as needing human
+confirmation via the annotation template (section 9). Changing this threshold again
+would change `failure_type`/`is_correct` for affected records; the value is recorded
+in the run manifest as `evaluator_settings.repetition_degeneration_threshold` (not
+just as a code constant) specifically so a future change is caught by the manifest's
+compatibility check on same-run-id restarts, and `EVALUATOR_VERSION` must be bumped
+alongside any such change.
 
 **`is_correct` semantics** (all `ClassificationResult`/`ResultRecord`
 fields):
@@ -339,7 +352,7 @@ changed model configuration (a different vLLM precision, an updated
 checkpoint) can never be silently treated as equivalent to an older run's
 results, the same way `prompt_version`/`protocol_version` protect against a
 prompt-wording change being silently reused. `evaluator_version`
-(`storage.EVALUATOR_VERSION`, currently `"evaluator_v4"`) exists as a
+(`storage.EVALUATOR_VERSION`, currently `"evaluator_v5"`) exists as a
 **separate** axis from `protocol_version`/`prompt_version`: a grading,
 tokenization, or retry/timeout-behavior fix (e.g. the answer-only
 detection fix, the rationale-token stripping change, or the explicit
@@ -519,11 +532,11 @@ just aggregate pass/fail) should the full 1,000-item runs proceed.
 ## 11. Non-goals (still deferred)
 
 - Does **not** run the full 1,000-item experiment against real APIs yet —
-  that requires (1) the source-diverse pilot (section 10) to pass, and
-  (2) `REPETITION_DEGENERATION_THRESHOLD` to be confirmed/preregistered
-  from real pilot data (see section 3), neither of which has happened yet.
-  Everything above is implemented and tested against a fake model client
-  only, aside from the exploratory pilots that motivated `v2`-`v4`.
+  `REPETITION_DEGENERATION_THRESHOLD` is now calibrated (section 3), but
+  the source-diverse pilot (section 10) must still be run/re-run under
+  `evaluator_v5` and its outputs inspected before the full run proceeds.
+  Everything above is implemented and tested against a fake model client,
+  plus the exploratory pilots that motivated `v2`-`v5`.
 - Does **not** attempt to resolve the provenance gaps in section 7.
 - Does **not** implement the actual HPC/vLLM deployment for the Qwen
   models — only the client code path, gated on `HPC_VLLM_BASE_URL` being

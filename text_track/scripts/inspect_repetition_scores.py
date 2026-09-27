@@ -2,14 +2,17 @@
 preregistering) REPETITION_DEGENERATION_THRESHOLD in text_track/scripts/evaluate/grading.py
 from real data — NOT by guessing.
 
-Per PROTOCOL.md section 3, inspect at least:
+REPETITION_DEGENERATION_THRESHOLD is now calibrated (0.30, see PROTOCOL.md section 3, and
+grading.py's comment on the constant) from 80 real pilot outputs. This script remains
+useful for re-calibration if the prompts, models, or n-gram formula change materially
+enough to warrant re-checking the threshold — inspect at least:
   - known/suspected degenerate responses (is_truncated or high repetition_ratio)
   - normal Ilokano responses
   - normal English responses
   - long but legitimate reasoning responses (high word_count, low repetition_ratio)
-before committing to a threshold for the full run. This script does not choose the
-threshold for you — it prints the distribution and flags candidate examples so a human can
-read the actual text and confirm.
+before changing the threshold. This script does not choose the threshold for you — it
+prints the distribution and flags candidate examples so a human can read the actual text
+and confirm.
 
 Usage:
     python3 text_track/scripts/inspect_repetition_scores.py <run_id> [--top N]
@@ -135,9 +138,11 @@ def main():
         )
 
     print(
-        "\nOnce you've read enough of these to be confident, set "
-        "grading.REPETITION_DEGENERATION_THRESHOLD to the chosen value and record the "
-        "rationale (which examples justified it) in PROTOCOL.md before the full run."
+        "\nREPETITION_DEGENERATION_THRESHOLD is currently 0.30 (calibrated — see "
+        "PROTOCOL.md section 3). If re-calibrating, once you've read enough of these to be "
+        "confident, update grading.REPETITION_DEGENERATION_THRESHOLD, bump EVALUATOR_VERSION "
+        "(a threshold change alters failure_type/is_correct for affected records), and "
+        "record the new rationale in PROTOCOL.md before the full run."
     )
 
 

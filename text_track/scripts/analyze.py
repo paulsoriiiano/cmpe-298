@@ -585,9 +585,10 @@ def main():
         W(f"| {mk} | {ck} | {src} | {d['flagged']}/{d['total']} ({rate_pct(d):.1f}%) |")
     W("")
     W("**Reminder**: `degeneration_candidate` is an automatic flag against "
-      "`grading.REPETITION_DEGENERATION_THRESHOLD`, which is NOT YET calibrated from real "
-      "pilot data as of this writing (see `inspect_repetition_scores.py`). Treat the rates "
-      "above as candidates pending human confirmation, not a final degeneration rate.\n")
+      "`grading.REPETITION_DEGENERATION_THRESHOLD` (0.30, calibrated from 80 real pilot "
+      "outputs — see PROTOCOL.md section 3). It is still a heuristic flag, not a confirmed "
+      "human classification — treat the rates above as candidates for review, not a final "
+      "degeneration rate.\n")
 
     # 3. Primary paired comparisons
     W("## 3. Primary accuracy comparisons (paired, McNemar)\n")
