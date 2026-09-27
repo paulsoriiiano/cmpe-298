@@ -17,9 +17,25 @@ Usage:
 import argparse
 import json
 import os
+import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "data", "eval_runs")
+
+sys.path.insert(0, SCRIPT_DIR)
+from evaluate.grading import TRUNCATION_FINISH_REASONS, compute_repetition_ratio  # noqa: E402
+
+
+def backfill_legacy_fields(record: dict) -> dict:
+    """evaluator_v3 (and earlier) records predate repetition_ratio/is_truncated —
+    compute them from raw_response/finish_reason so old pilot data can be used for
+    threshold calibration without rerunning. Records that already have these fields
+    (evaluator_v4+) are returned unchanged."""
+    if record.get("repetition_ratio") is None:
+        record["repetition_ratio"] = compute_repetition_ratio(record.get("raw_response") or "")
+    if record.get("is_truncated") is None:
+        record["is_truncated"] = record.get("finish_reason") in TRUNCATION_FINISH_REASONS
+    return record
 
 
 def load_run(run_id: str) -> list[dict]:
@@ -30,7 +46,7 @@ def load_run(run_id: str) -> list[dict]:
     with open(path, encoding="utf-8") as f:
         for line in f:
             if line.strip():
-                records.append(json.loads(line))
+                records.append(backfill_legacy_fields(json.loads(line)))
     return records
 
 
