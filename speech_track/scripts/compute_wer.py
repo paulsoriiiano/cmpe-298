@@ -1,39 +1,25 @@
-"""
-Compute chapter-level WER and CER for Whisper Large-v3.
+"""Compute chapter-level WER/CER and language-level summary statistics."""
 
-References:
-    references/chapter_level/<language>/<chapter>.txt
-
-Hypotheses:
-    transcriptions/whisper_large_v3_normalized/<language>/<chapter>.txt
-
-Outputs:
-    results/whisper_large_v3_chapter_results.csv
-    results/whisper_large_v3_summary.csv
-"""
-
+import argparse
 from pathlib import Path
 
 import pandas as pd
 from jiwer import wer, cer
 
 
-REF_ROOT = Path("references/chapter_level")
-HYP_ROOT = Path("transcriptions/whisper_large_v3_normalized")
-RESULTS_DIR = Path("results")
-
-
-def main():
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+def compute_scores(
+    ref_root: Path,
+    hyp_root: Path,
+    results_dir: Path,
+    model_name: str,
+) -> None:
+    results_dir.mkdir(parents=True, exist_ok=True)
 
     rows = []
 
-    for language in ["en", "ilo"]:
-        ref_dir = REF_ROOT / language
-        hyp_dir = HYP_ROOT / language
-
-        if not ref_dir.exists():
-            raise FileNotFoundError(f"Missing reference directory: {ref_dir}")
+    for ref_dir in sorted([path for path in ref_root.iterdir() if path.is_dir()]):
+        language = ref_dir.name
+        hyp_dir = hyp_root / language
 
         if not hyp_dir.exists():
             raise FileNotFoundError(f"Missing hypothesis directory: {hyp_dir}")
@@ -50,7 +36,7 @@ def main():
             hypothesis = hyp_path.read_text(encoding="utf-8").strip()
 
             rows.append({
-                "model": "whisper_large_v3",
+                "model": model_name,
                 "language": language,
                 "chapter_id": chapter_id,
                 "wer": wer(reference, hypothesis),
@@ -61,12 +47,11 @@ def main():
 
     results = pd.DataFrame(rows)
 
-    chapter_out = RESULTS_DIR / "whisper_large_v3_chapter_results.csv"
+    chapter_out = results_dir / f"{model_name}_chapter_results.csv"
     results.to_csv(chapter_out, index=False)
 
     summary = (
-        results
-        .groupby(["model", "language"])
+        results.groupby(["model", "language"])
         .agg(
             mean_wer=("wer", "mean"),
             median_wer=("wer", "median"),
@@ -79,13 +64,28 @@ def main():
         .reset_index()
     )
 
-    summary_out = RESULTS_DIR / "whisper_large_v3_summary.csv"
+    summary_out = results_dir / f"{model_name}_summary.csv"
     summary.to_csv(summary_out, index=False)
 
     print(f"Wrote {chapter_out}")
     print(f"Wrote {summary_out}")
-    print()
     print(summary.to_string(index=False))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ref-root", default="references/chapter_level")
+    parser.add_argument("--hyp-root", default="transcriptions/whisper_large_v3_normalized")
+    parser.add_argument("--results-dir", default="results")
+    parser.add_argument("--model-name", default="whisper_large_v3")
+    args = parser.parse_args()
+
+    compute_scores(
+        Path(args.ref_root),
+        Path(args.hyp_root),
+        Path(args.results_dir),
+        args.model_name,
+    )
 
 
 if __name__ == "__main__":
