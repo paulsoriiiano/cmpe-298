@@ -131,5 +131,42 @@ class CompleteWithRetryTests(unittest.TestCase):
         self.assertEqual(retry_count, 1)
 
 
+class OpenAICompatibleClientMaxTokensParamTests(unittest.TestCase):
+    """Newer OpenAI reasoning models (o1/o3/gpt-5.x) reject the legacy "max_tokens" chat
+    completions parameter outright (400 unsupported_parameter) and require
+    "max_completion_tokens" instead. These tests inspect the actual kwargs
+    OpenAICompatibleClient.complete() builds, rather than going through FakeModelClient
+    (which bypasses real kwargs construction entirely)."""
+
+    def _fake_openai_response(self):
+        response = mock.Mock()
+        choice = mock.Mock()
+        choice.message.content = "ok"
+        choice.finish_reason = "stop"
+        response.choices = [choice]
+        response.usage = mock.Mock(prompt_tokens=1, completion_tokens=1)
+        return response
+
+    def _create_call_kwargs(self, config):
+        client = models.OpenAICompatibleClient(base_url="https://api.openai.com/v1", api_key_env="OPENAI_API_KEY")
+        fake_create = mock.Mock(return_value=self._fake_openai_response())
+        with mock.patch("openai.OpenAI") as mock_openai_cls:
+            mock_openai_cls.return_value.chat.completions.create = fake_create
+            client.complete(system="sys", user="hi", config=config)
+        return fake_create.call_args.kwargs
+
+    def test_reasoning_model_uses_max_completion_tokens_not_max_tokens(self):
+        config = models.MODEL_REGISTRY["gpt_5_2"]
+        kwargs = self._create_call_kwargs(config)
+        self.assertNotIn("max_tokens", kwargs)
+        self.assertEqual(kwargs["max_completion_tokens"], config.max_output_tokens)
+
+    def test_non_reasoning_model_uses_max_tokens_not_max_completion_tokens(self):
+        config = models.MODEL_REGISTRY["llama_3_8b"]
+        kwargs = self._create_call_kwargs(config)
+        self.assertNotIn("max_completion_tokens", kwargs)
+        self.assertEqual(kwargs["max_tokens"], config.max_output_tokens)
+
+
 if __name__ == "__main__":
     unittest.main()

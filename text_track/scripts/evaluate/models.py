@@ -21,6 +21,11 @@ class ModelConfig:
     endpoint: str | None = None
     temperature: float = 0.0
     supports_temperature: bool = True   # reasoning models often reject a non-default temperature
+    # Newer OpenAI reasoning models (o1/o3/gpt-5.x) reject the legacy "max_tokens" chat
+    # completions parameter entirely (400 unsupported_parameter) and require
+    # "max_completion_tokens" instead. Anthropic, the HF router, and vLLM's
+    # OpenAI-compatible server all still accept "max_tokens", so this defaults to False.
+    uses_max_completion_tokens: bool = False
     max_output_tokens: int = 2048
     seed: int | None = None
     # Our own retry loop in complete_with_retry() drives off this (backoff = 2 * 2**attempt
@@ -132,9 +137,12 @@ class OpenAICompatibleClient:
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            max_tokens=config.max_output_tokens,
             timeout=config.request_timeout_seconds,
         )
+        if config.uses_max_completion_tokens:
+            kwargs["max_completion_tokens"] = config.max_output_tokens
+        else:
+            kwargs["max_tokens"] = config.max_output_tokens
         if config.supports_temperature:
             kwargs["temperature"] = config.temperature
         if config.provider == "hpc":
@@ -178,8 +186,10 @@ MODEL_REGISTRY: dict[str, ModelConfig] = {
         display_name="GPT-5.2 (OpenAI direct API)",
         provider="openai",
         model_id="gpt-5.2-2025-12-11",
-        # Reasoning models on the OpenAI API generally reject a non-default temperature.
+        # Reasoning models on the OpenAI API generally reject a non-default temperature,
+        # and this one specifically rejects "max_tokens" in favor of "max_completion_tokens".
         supports_temperature=False,
+        uses_max_completion_tokens=True,
     ),
     # HPC-hosted via vLLM's OpenAI-compatible server. Model weights are still being staged
     # on the HPC as of this writing — endpoint comes from HPC_VLLM_BASE_URL (see .env);
