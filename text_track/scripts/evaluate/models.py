@@ -173,11 +173,11 @@ MODEL_REGISTRY: dict[str, ModelConfig] = {
         endpoint="https://router.huggingface.co/v1",
         context_length=8192,
     ),
-    "gpt_5_2_thinking": ModelConfig(
-        key="gpt_5_2_thinking",
-        display_name="ChatGPT 5.2 Thinking (OpenAI direct API)",
+    "gpt_5_2": ModelConfig(
+        key="gpt_5_2",
+        display_name="GPT-5.2 (OpenAI direct API)",
         provider="openai",
-        model_id="gpt-5.2-2025-12-11-thinking",
+        model_id="gpt-5.2-2025-12-11",
         # Reasoning models on the OpenAI API generally reject a non-default temperature.
         supports_temperature=False,
     ),
