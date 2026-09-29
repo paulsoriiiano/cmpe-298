@@ -177,7 +177,7 @@ MODEL_REGISTRY: dict[str, ModelConfig] = {
         key="gpt_5_2_thinking",
         display_name="ChatGPT 5.2 Thinking (OpenAI direct API)",
         provider="openai",
-        model_id="gpt-5.2-thinking",
+        model_id="gpt-5.2-2025-12-11-thinking",
         # Reasoning models on the OpenAI API generally reject a non-default temperature.
         supports_temperature=False,
     ),

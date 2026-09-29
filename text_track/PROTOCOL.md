@@ -262,7 +262,7 @@ mistaken for new-wording ones on resume.
 |---|---|---|---|---|---|
 | `claude_sonnet_4_6` | `claude-sonnet-4-6` | 0.0 | 2048 | Anthropic | ready |
 | `llama_3_8b` | `meta-llama/Meta-Llama-3-8B-Instruct` | 0.0 | 2048 | HF router | ready |
-| `gpt_5_2_thinking` | `gpt-5.2-thinking` | n/a (reasoning model) | 2048 | OpenAI direct API | ready |
+| `gpt_5_2_thinking` | `gpt-5.2-2025-12-11-thinking` | n/a (reasoning model) | 2048 | OpenAI direct API | ready |
 | `qwen_3_6_27b` | `qwen3.6-27b` | 0.0 | 2048 | HPC via vLLM | ready — weights staged, `HPC_VLLM_BASE_URL` configured, successful real pilot calls made |
 | `qwen_sealion_v4_5_27b_it` | `qwen-sealion-v4.5-27b-it` | 0.0 | 2048 | HPC via vLLM | ready, same as above |
 
