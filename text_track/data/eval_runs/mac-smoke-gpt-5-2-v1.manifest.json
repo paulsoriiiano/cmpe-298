@@ -1,0 +1,75 @@
+{
+  "run_id": "mac-smoke-gpt-5-2-v1",
+  "created_at": "2026-09-30T22:05:54.051797+00:00",
+  "last_resumed_at": null,
+  "dataset_version": "dataset_conference_v1.1",
+  "protocol_version": "protocol_v2",
+  "evaluator_version": "evaluator_v5",
+  "conditions": [
+    "A_EE",
+    "A_II",
+    "A_IE",
+    "A_EI",
+    "A_E0",
+    "A_I0"
+  ],
+  "models": [
+    "gpt_5_2"
+  ],
+  "model_settings": {
+    "gpt_5_2": {
+      "key": "gpt_5_2",
+      "display_name": "GPT-5.2 (OpenAI direct API)",
+      "provider": "openai",
+      "model_id": "gpt-5.2-2025-12-11",
+      "endpoint": null,
+      "temperature": 0.0,
+      "supports_temperature": false,
+      "uses_max_completion_tokens": true,
+      "max_output_tokens": 2048,
+      "seed": null,
+      "max_retries": 3,
+      "request_timeout_seconds": 300.0,
+      "hf_repo": null,
+      "checkpoint_commit_sha": null,
+      "revision": null,
+      "tokenizer_repo": null,
+      "context_length": null,
+      "thinking_mode": null,
+      "precision": null,
+      "vllm_version": null,
+      "flashinfer_sampler": null,
+      "config_fingerprint": "2d3a04cfb6299674",
+      "resolved_tokenizer_model_id": "tiktoken/cl100k_base",
+      "resolved_tokenizer_revision": "0.14.0"
+    }
+  },
+  "git_commit": "f8d59ebf5ae2d721139617c800f26d80525afbe4",
+  "planned_item_ids_by_condition": {
+    "A_EE": [
+      "gsm8k_0"
+    ],
+    "A_II": [
+      "gsm8k_0"
+    ],
+    "A_IE": [
+      "gsm8k_0"
+    ],
+    "A_EI": [
+      "gsm8k_0"
+    ],
+    "A_E0": [
+      "gsm8k_2"
+    ],
+    "A_I0": [
+      "gsm8k_2"
+    ]
+  },
+  "evaluator_settings": {
+    "repetition_metric": "1_unique_over_total_4gram",
+    "repetition_ngram_size": 4,
+    "repetition_degeneration_threshold": 0.3
+  },
+  "total_planned_units": 8,
+  "resuming_from_run_ids": []
+}
