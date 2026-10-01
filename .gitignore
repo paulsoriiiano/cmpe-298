@@ -220,3 +220,6 @@ __marimo__/
 
 # Claude
 .claude
+
+# Mac
+.DS_Store
