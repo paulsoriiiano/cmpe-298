@@ -17,6 +17,8 @@ which one was actually used.
 Provider-reported input_tokens/output_tokens (already on ModelResponse) remain the exact,
 authoritative figures for cost accounting; nothing here overrides those.
 """
+from __future__ import annotations
+
 import os
 
 import tiktoken
@@ -34,6 +36,11 @@ def _get_tiktoken_encoding():
     if _tiktoken_encoding is None:
         _tiktoken_encoding = tiktoken.get_encoding(TIKTOKEN_ENCODING)
     return _tiktoken_encoding
+
+
+def get_tiktoken_encoding():
+    """Return the shared tiktoken encoding used for comparable reference counts."""
+    return _get_tiktoken_encoding()
 
 
 def count_tokens_tiktoken(text: str | None) -> int:

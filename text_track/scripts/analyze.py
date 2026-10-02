@@ -1,652 +1,625 @@
-"""Numerical analysis of the staged, six-condition cross-lingual evaluation.
+"""Analyze the TRT evaluation for GPT-5.2 and the two Qwen models.
 
-Rewritten for the flat per-(item, model, condition, stage) JSONL schema written by
-text_track/scripts/evaluate/ (see storage.ResultRecord) — the previous version of this
-script assumed a nested {model: {pass: {...}}} row per item, hard-coded to Claude/Llama and
-the old 3-pass names, and cannot read the current schema at all.
+This consumes the flat ResultRecord JSONL files emitted by evaluate/run.py and writes:
+* analysis.md: human-readable tables and results
+* analysis.json: machine-readable summaries
 
-Conditions: A_EE, A_II, A_IE, A_EI (reasoning; staged pivots A_IE/A_EI have a "translate"
-stage that is NOT graded) and A_E0/A_I0 (direct-answer controls, stubbed as of this writing).
-
-Accuracy denominator: one resolved condition-level outcome per planned item (see
-resolve_condition_outcomes()). For single-call conditions (A_EE/A_II/A_E0/A_I0) this is
-just that item's reason/direct-stage is_correct. For staged pivot conditions (A_IE/A_EI),
-a model-caused translation failure (translation_format_failure, truncation, or refusal)
-counts as an end-to-end incorrect outcome for that item, even though no reason-stage row
-exists — the model failed to produce a usable pivot translation, which IS an incorrect
-outcome, not a missing one. Infrastructure/parser failures (translation- or reason-stage)
-remain unresolved (excluded from both numerator and denominator) and are reported as a
-validation warning (or a hard failure under --strict) rather than silently folded into
-either — they represent incomplete work, not a graded model outcome.
-
-Usage:
-    python3 text_track/scripts/analyze.py <run_id> [--strict]
-    python3 text_track/scripts/analyze.py --path /path/to/some.jsonl
+It reports exact-match accuracy, the four paired condition gaps, paired McNemar tests, bootstrap confidence intervals, recovery and
+regression counts, domain breakdowns, failure rates, translation-stage
+completion, and token statistics.
 """
+
+from __future__ import annotations
+
 import argparse
 import json
 import math
 import os
-import sys
+import random
+import statistics
 from collections import Counter, defaultdict
+import re
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-RUNS_DIR = os.path.join(SCRIPT_DIR, "..", "data", "eval_runs")
-ANALYSES_DIR = os.path.join(SCRIPT_DIR, "..", "data", "analyses")
-# NOTE: this must never default to data/analysis.md — that file is a preserved artifact
-# from the old 3-pass pipeline (per the conference plan: "Do not combine old and new
-# experimental results"). Each new-schema run gets its own dated file under ANALYSES_DIR.
 
-REASON_CONDITIONS_PRIMARY = ["A_EE", "A_II", "A_IE"]
-ALL_REASONING_CONDITIONS = ["A_EE", "A_II", "A_IE", "A_EI", "A_E0", "A_I0"]
-GRADED_STAGES = {"reason", "direct"}
-NOT_EVALUATED_FAILURE_TYPES = {"infrastructure_api_failure", "parser_failure"}
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_INPUTS = {
+    "gpt_5_2": os.path.join(ROOT, "results", "full-gpt-5-2-evaluator-v1", "full-gpt-5-2-evaluator-v1.jsonl"),
+    "qwen_3_6_27b": os.path.join(ROOT, "results", "full-qwen36-evaluator-v5", "full-qwen36-evaluator-v5.jsonl"),
+    "qwen_sealion_v4_5_27b_it": os.path.join(ROOT, "results", "full-sealion-evaluator-v5", "full-sealion-evaluator-v5.jsonl"),
+}
+DEFAULT_OUTPUT_MD = os.path.join(ROOT, "data", "analysis.md")
+DEFAULT_OUTPUT_JSON = os.path.join(ROOT, "data", "analysis.json")
+DEFAULT_DATASET = os.path.join(ROOT, "data", "dataset.jsonl")
 
-# The primary comparison family per PROTOCOL.md section 6 — paired (same item, same model),
-# compared via McNemar's test since every condition runs over the same item IDs.
-PRIMARY_COMPARISONS = [
-    ("A_EE", "A_II", "overall language gap"),
-    ("A_II", "A_IE", "English-pivot benefit"),
-    ("A_EE", "A_IE", "remaining pivot gap"),
+MODEL_NAMES = {
+    "gpt_5_2": "GPT-5.2",
+    "qwen_3_6_27b": "Qwen3.6-27B",
+    "qwen_sealion_v4_5_27b_it": "Qwen-SEA-LION-v4.5-27B-IT",
+}
+PRIMARY_CONDITIONS = ["A_EE", "A_II", "A_IE", "A_EI"]
+ALL_CONDITIONS = PRIMARY_CONDITIONS + ["A_E0", "A_I0"]
+CONDITION_LABELS = {
+    "A_EE": "English input / English reasoning",
+    "A_II": "Ilokano input / Ilokano reasoning",
+    "A_IE": "Ilokano input / English pivot",
+    "A_EI": "English input / Ilokano pivot",
+    "A_E0": "English direct-answer control",
+    "A_I0": "Ilokano direct-answer control",
+}
+COMPARISONS = [
+    ("A_EE", "A_II", "overall_language_gap"),
+    ("A_IE", "A_II", "pivot_recovery"),
+    ("A_IE", "A_EE", "pivot_penalty"),
+    ("A_EE", "A_EI", "reverse_pivot_degradation"),
 ]
 
 
-def load_rows(path: str) -> list[dict]:
-    with open(path, "r", encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
-
-
-def _planned_keys(manifest: dict) -> set:
-    """The full set of (item_id, model_key, condition_key, stage) units the CURRENT run's
-    manifest actually plans to produce — used to bound what merge_resumed_rows() is allowed
-    to pull in from an ancestor run's file (which may contain thousands of unrelated rows
-    from a much larger prior experiment)."""
-    planned = set()
-    planned_by_condition = manifest.get("planned_item_ids_by_condition", {})
-    model_keys = manifest.get("models", [])
-    for condition_key, item_ids in planned_by_condition.items():
-        for stage in _expected_stages(condition_key):
-            for model_key in model_keys:
-                for item_id in item_ids:
-                    planned.add((item_id, model_key, condition_key, stage))
-    return planned
-
-
-def merge_resumed_rows(rows: list[dict], ancestor_run_ids: list[str], manifest: dict) -> list[dict]:
-    """A run that resumed from prior runs only WRITES the units it actually executed
-    itself — units it skipped (because a prior run already completed them) are never
-    copied into its own JSONL. Reading only {run_id}.jsonl therefore silently under-counts
-    completeness for any resumed run. The manifest's resuming_from_run_ids already gives
-    the exact set of other run files that hold those skipped units (resume_index scans
-    every file in RUNS_DIR, so a unit is attributed to whichever run's file actually
-    contains it — one level is enough; there is no deeper chain to walk).
-
-    An ancestor run's file is NOT filtered to the current run's item selection by default —
-    it may be a much larger prior experiment (e.g. 1,000 items) that this run only resumed
-    5 of. Pulling in every row from that file would silently inflate this run's analysis
-    with unrelated data. So a row is only merged in if its key is BOTH (a) not already
-    present in `rows`, (b) one of THIS manifest's planned_item_ids_by_condition units, and
-    (c) compatible with this run's dataset_version/protocol_version/evaluator_version and
-    (per model) config_fingerprint — an ancestor row that used a different model
-    configuration is not a valid substitute for this run's own planned unit.
-    """
-    present = {(r["item_id"], r["model_key"], r["condition_key"], r["stage"]) for r in rows}
-    planned_keys = _planned_keys(manifest)
-    dataset_version = manifest.get("dataset_version")
-    protocol_version = manifest.get("protocol_version")
-    evaluator_version = manifest.get("evaluator_version")
-    model_settings = manifest.get("model_settings", {})
-
-    merged = list(rows)
-    for ancestor_run_id in ancestor_run_ids:
-        ancestor_path = os.path.join(RUNS_DIR, f"{ancestor_run_id}.jsonl")
-        if not os.path.exists(ancestor_path):
-            continue
-        for r in load_rows(ancestor_path):
-            key = (r["item_id"], r["model_key"], r["condition_key"], r["stage"])
-            if key in present or key not in planned_keys:
+def load_records(path):
+    rows = []
+    with open(path, encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, 1):
+            if not line.strip():
                 continue
-            if r.get("dataset_version") != dataset_version:
-                continue
-            if r.get("protocol_version") != protocol_version:
-                continue
-            if r.get("evaluator_version") != evaluator_version:
-                continue
-            expected_fp = model_settings.get(r["model_key"], {}).get("config_fingerprint")
-            if expected_fp is None or r.get("config_fingerprint") != expected_fp:
-                continue
-            merged.append(r)
-            present.add(key)
-    return merged
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSON in {path}:{line_number}: {exc}") from exc
+            rows.append(row)
+    return rows
 
 
-def load_run(run_id: str) -> list[dict]:
-    path = os.path.join(RUNS_DIR, f"{run_id}.jsonl")
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} not found. Is {run_id!r} a real run_id?")
-    rows = load_rows(path)
-    try:
-        manifest = load_manifest(run_id)
-    except FileNotFoundError:
-        return rows
-    ancestor_run_ids = manifest.get("resuming_from_run_ids", [])
-    if not ancestor_run_ids:
-        return rows
-    return merge_resumed_rows(rows, ancestor_run_ids, manifest)
+def mean_or_none(values):
+    return statistics.mean(values) if values else None
 
 
-def mcnemar_exact(b, c):
-    """Two-sided exact McNemar (binomial) p-value on discordant counts b, c.
-    Under H0 each discordant pair is a fair coin: b ~ Binomial(n=b+c, p=0.5)."""
-    n = b + c
+def median_or_none(values):
+    return statistics.median(values) if values else None
+
+
+def proportion_ci(successes, total, z=1.959963984540054):
+    """Wilson 95% confidence interval for one proportion."""
+    if not total:
+        return {"low": None, "high": None}
+    p = successes / total
+    denom = 1 + z * z / total
+    centre = (p + z * z / (2 * total)) / denom
+    half = z * math.sqrt((p * (1 - p) + z * z / (4 * total)) / total) / denom
+    return {"low": max(0.0, centre - half), "high": min(1.0, centre + half)}
+
+
+def exact_mcnemar_p(first_only, second_only):
+    n = first_only + second_only
     if n == 0:
         return 1.0
-    k = min(b, c)
-    tail = sum(math.comb(n, i) for i in range(0, k + 1)) * (0.5 ** n)
-    return min(1.0, 2.0 * tail)
+    k = min(first_only, second_only)
+    tail = sum(math.comb(n, i) for i in range(k + 1)) / (2 ** n)
+    return min(1.0, 2 * tail)
 
 
-def mcnemar_chi2_cc(b, c):
-    """McNemar chi-square statistic with continuity correction (df=1)."""
-    if b + c == 0:
-        return 0.0
-    return (abs(b - c) - 1) ** 2 / (b + c)
+def chi_square_mcnemar(first_only, second_only):
+    n = first_only + second_only
+    if n == 0:
+        return {"statistic": 0.0, "p_value": 1.0}
+    statistic = (abs(first_only - second_only) - 1) ** 2 / n
+    return {"statistic": statistic, "p_value": math.erfc(math.sqrt(statistic / 2))}
 
 
-def chi2_sf_df1(x):
-    """Survival function (upper-tail p-value) of chi-square with 1 df."""
-    if x <= 0:
-        return 1.0
-    return math.erfc(math.sqrt(x / 2.0))
+def bootstrap_difference(first, second, iterations=10000, seed=42):
+    """Paired bootstrap CI for accuracy(first)-accuracy(second)."""
+    n = len(first)
+    if not n:
+        return {"low": None, "high": None}
+    rng = random.Random(seed)
+    differences = []
+    for _ in range(iterations):
+        total = 0
+        for _ in range(n):
+            index = rng.randrange(n)
+            total += first[index] - second[index]
+        differences.append(total / n)
+    differences.sort()
+    return {
+        "low": differences[int(0.025 * (iterations - 1))],
+        "high": differences[int(0.975 * (iterations - 1))],
+    }
 
 
-def holm_adjust(p_values: list[float]) -> list[float]:
-    """Holm step-down adjustment. Returns adjusted p-values in the ORIGINAL input order."""
-    order = sorted(range(len(p_values)), key=lambda i: p_values[i])
-    m = len(p_values)
-    adjusted = [None] * m
-    running_max = 0.0
-    for rank, idx in enumerate(order):
-        adj = min(1.0, (m - rank) * p_values[idx])
-        running_max = max(running_max, adj)
-        adjusted[idx] = running_max
+def holm_adjust(p_values):
+    """Holm step-down correction, preserving the input keys."""
+    ordered = sorted(p_values.items(), key=lambda item: item[1])
+    adjusted = {}
+    running = 0.0
+    count = len(ordered)
+    for rank, (key, value) in enumerate(ordered):
+        corrected = min(1.0, (count - rank) * value)
+        running = max(running, corrected)
+        adjusted[key] = running
     return adjusted
 
 
-def wilson_ci(correct: int, total: int, z: float = 1.96) -> tuple[float, float]:
-    """95% Wilson score interval for a binomial proportion — better-behaved than the normal
-    approximation near 0/1, which matters for small per-source samples (e.g. n=15)."""
-    if total == 0:
-        return (0.0, 0.0)
-    p = correct / total
-    denom = 1 + z ** 2 / total
-    center = (p + z ** 2 / (2 * total)) / denom
-    margin = (z * math.sqrt(p * (1 - p) / total + z ** 2 / (4 * total ** 2))) / denom
-    return (max(0.0, center - margin), min(1.0, center + margin))
+def paired_records(index, model, first_condition, second_condition):
+    first = index.get((model, first_condition, "reason"))
+    second = index.get((model, second_condition, "reason"))
+    ids = sorted(set(first or {}) & set(second or {}))
+    pairs = []
+    for item_id in ids:
+        a = first[item_id].get("is_correct")
+        b = second[item_id].get("is_correct")
+        if isinstance(a, bool) and isinstance(b, bool):
+            pairs.append((item_id, a, b))
+    return pairs
 
 
-# ---------------- validation ---------------- #
-
-def validate(rows: list[dict], manifest: dict | None = None) -> list[str]:
-    """Returns a list of warning strings. Does not raise — callers decide (via --strict)
-    whether any warnings should be treated as fatal.
-
-    If `manifest` is given (the run's manifest.json, loaded via load_manifest()), also
-    checks experiment completeness against it: every planned item/model/condition/stage
-    unit must have a row. Without the manifest this can't be checked at all — rows-only
-    validation has no way to know about work that never ran in the first place."""
-    warnings = []
-
-    seen = Counter((r["item_id"], r["model_key"], r["condition_key"], r["stage"]) for r in rows)
-    duplicates = {k: v for k, v in seen.items() if v > 1}
-    if duplicates:
-        warnings.append(f"{len(duplicates)} duplicate (item, model, condition, stage) keys found.")
-
-    not_evaluated = [r for r in rows if r.get("failure_type") in NOT_EVALUATED_FAILURE_TYPES]
-    if not_evaluated:
-        by_cell = Counter((r["model_key"], r["condition_key"], r["failure_type"]) for r in not_evaluated)
-        detail = "; ".join(f"{mk}/{ck}/{ft}={n}" for (mk, ck, ft), n in sorted(by_cell.items()))
-        warnings.append(
-            f"{len(not_evaluated)} infrastructure/parser failure(s) excluded from accuracy "
-            f"denominators (rerun these before treating numbers as final): {detail}"
-        )
-
-    protocol_versions = {r.get("protocol_version") for r in rows}
-    evaluator_versions = {r.get("evaluator_version") for r in rows}
-    if len(protocol_versions) > 1:
-        warnings.append(f"Mixed protocol_version values in this file: {protocol_versions}")
-    if len(evaluator_versions) > 1:
-        warnings.append(f"Mixed evaluator_version values in this file: {evaluator_versions}")
-
-    if manifest is not None:
-        warnings.extend(check_manifest_completeness(rows, manifest))
-
-    return warnings
-
-
-# ---------------- accuracy ---------------- #
-
-def in_accuracy_denominator(r: dict) -> bool:
-    return r["stage"] in GRADED_STAGES and r["is_correct"] is not None
-
-
-def is_success(r: dict) -> bool:
-    return r["is_correct"] is True
-
-
-PIVOT_CONDITIONS = {"A_IE", "A_EI"}
-DIRECT_CONDITIONS = {"A_E0", "A_I0"}
-
-# Translate-stage failure_types that are the MODEL's fault, not infrastructure's — a
-# translation that was refused, truncated, or malformed all mean the model failed to
-# produce a usable pivot translation, so the item counts as end-to-end incorrect rather
-# than being excluded as unresolved. Infra/parser failures are the only case that stays
-# unresolved (None) — see resolve_condition_outcomes().
-MODEL_CAUSED_TRANSLATION_FAILURES = {
-    "translation_format_failure", "truncation", "refusal",
-}
-
-
-def _expected_stages(condition_key: str) -> list[str]:
-    if condition_key in PIVOT_CONDITIONS:
-        return ["translate", "reason"]
-    if condition_key in DIRECT_CONDITIONS:
-        return ["direct"]
-    return ["reason"]
-
-
-def load_manifest(run_id: str, runs_dir: str | None = None) -> dict:
-    path = os.path.join(runs_dir if runs_dir is not None else RUNS_DIR, f"{run_id}.manifest.json")
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def check_manifest_completeness(rows: list[dict], manifest: dict) -> list[str]:
-    """Verifies every planned (item, model, condition, stage) unit from the manifest has a
-    corresponding row. This catches work that never ran at all (e.g. a crashed run that was
-    never resumed) — validate()'s other checks only look at rows that DO exist, so they
-    can't detect units that are simply missing outright.
-
-    Missing-reason-after-model-caused-translation-failure and
-    missing-reason-after-infra-failure are NOT reported as separate warnings here — those
-    are expected, understood states already surfaced by resolve_condition_outcomes() (the
-    former resolves to an end-to-end-incorrect outcome, the latter to unresolved and is
-    already flagged by validate()'s NOT_EVALUATED_FAILURE_TYPES warning). This check only
-    flags units with NO row at all for a stage that should have at least attempted a call.
-    """
-    warnings = []
-    present = {
-        (r["item_id"], r["model_key"], r["condition_key"], r["stage"]) for r in rows
-    }
-    translate_outcome = {
-        (r["item_id"], r["model_key"], r["condition_key"]): r.get("failure_type")
-        for r in rows if r["stage"] == "translate"
+def paired_test(index, model, first_condition, second_condition, seed):
+    pairs = paired_records(index, model, first_condition, second_condition)
+    first = [int(a) for _, a, _ in pairs]
+    second = [int(b) for _, _, b in pairs]
+    first_only = sum(a and not b for a, b in zip(first, second))
+    second_only = sum(b and not a for a, b in zip(first, second))
+    first_correct = sum(first)
+    second_correct = sum(second)
+    total = len(pairs)
+    delta = (first_correct - second_correct) / total if total else None
+    chi = chi_square_mcnemar(first_only, second_only)
+    return {
+        "n_paired": total,
+        "first_condition": first_condition,
+        "second_condition": second_condition,
+        "first_accuracy": first_correct / total if total else None,
+        "second_accuracy": second_correct / total if total else None,
+        "delta_first_minus_second": delta,
+        "delta_ci_bootstrap_95": bootstrap_difference(first, second, seed=seed),
+        "first_only_correct": first_only,
+        "second_only_correct": second_only,
+        "both_correct": sum(a and b for a, b in zip(first, second)),
+        "both_incorrect": sum(not a and not b for a, b in zip(first, second)),
+        "mcnemar_exact_p": exact_mcnemar_p(first_only, second_only),
+        "mcnemar_chi2_cc": chi["statistic"],
+        "mcnemar_chi2_p": chi["p_value"],
+        "item_ids": [item_id for item_id, _, _ in pairs],
     }
 
-    planned_by_condition = manifest.get("planned_item_ids_by_condition", {})
-    model_keys = manifest.get("models", [])
-    missing = []
-    for condition_key, item_ids in planned_by_condition.items():
-        expected_stages = _expected_stages(condition_key)
-        for model_key in model_keys:
-            for item_id in item_ids:
-                for stage in expected_stages:
-                    if (item_id, model_key, condition_key, stage) in present:
-                        continue
-                    if stage == "reason" and condition_key in PIVOT_CONDITIONS:
-                        translate_failure_type = translate_outcome.get(
-                            (item_id, model_key, condition_key)
-                        )
-                        if translate_failure_type in MODEL_CAUSED_TRANSLATION_FAILURES or (
-                            translate_failure_type
-                            in NOT_EVALUATED_FAILURE_TYPES
-                        ):
-                            continue
-                    missing.append((item_id, model_key, condition_key, stage))
 
-    if missing:
-        by_cell = Counter((mk, ck, stage) for _, mk, ck, stage in missing)
-        detail = "; ".join(f"{mk}/{ck}/{stage}={n}" for (mk, ck, stage), n in sorted(by_cell.items()))
-        warnings.append(
-            f"{len(missing)} planned (item, model, condition, stage) unit(s) from the "
-            f"manifest have NO row at all — never ran, or ran but was never written: {detail}"
-        )
-    return warnings
+def accuracy(rows):
+    usable = [r for r in rows if isinstance(r.get("is_correct"), bool)]
+    correct = sum(r["is_correct"] for r in usable)
+    result = {"correct": correct, "total": len(usable), "accuracy": correct / len(usable) if usable else None}
+    result["ci_wilson_95"] = proportion_ci(correct, len(usable))
+    return result
 
 
-def resolve_condition_outcomes(rows: list[dict], model_key: str, condition_key: str) -> dict:
-    """Returns {item_id: is_correct_or_None} — one condition-level outcome per item, for
-    single-stage conditions (direct/reason) as well as staged pivots.
+MODEL_CAUSED_TRANSLATION_FAILURES = {"translation_format_failure", "truncation", "refusal"}
 
-    For A_IE/A_EI, a failed translation means no "reason" row is ever produced for that
-    item — simply reading reason-stage rows (as in_accuracy_denominator does) would make
-    that item silently vanish from the denominator rather than count against the pivot
-    condition's accuracy. Reconstruct the outcome per item instead of fabricating a fake
-    reasoning record in the raw JSONL (which must stay an immutable record of what actually
-    ran):
-      - a completed reason-stage row exists -> use its is_correct
-      - the translate-stage row is a model-caused failure (MODEL_CAUSED_TRANSLATION_FAILURES:
-        translation_format_failure, truncation, or refusal) with no corresponding reason
-        row -> end-to-end incorrect (False), since the model failed to produce a usable
-        pivot translation
-      - the translate-stage row is an infrastructure/parser failure with no corresponding
-        reason row -> unresolved (None); this is incomplete work, not a graded outcome
-      - no rows at all for this item/model/condition -> not present in the returned dict
+
+def condition_outcomes(rows, condition):
+    """Resolve one end-to-end outcome per item.
+
+    A pivot translation that was truncated/refused/malformed is an actual model
+    failure and counts as False for end-to-end accuracy. Reasoning-only paired tests can still exclude it.
     """
-    condition_rows = [
-        r for r in rows if r["model_key"] == model_key and r["condition_key"] == condition_key
-    ]
-    if condition_key not in PIVOT_CONDITIONS:
+    condition_rows = [r for r in rows if r.get("condition_key") == condition]
+    if condition not in ("A_IE", "A_EI"):
         return {
-            r["item_id"]: r["is_correct"] for r in condition_rows if in_accuracy_denominator(r)
+            r["item_id"]: r.get("is_correct")
+            for r in condition_rows
+            if r.get("stage") in ("reason", "direct") and isinstance(r.get("is_correct"), bool)
         }
-
-    reason_by_item = {r["item_id"]: r for r in condition_rows if r["stage"] == "reason"}
-    translate_by_item = {r["item_id"]: r for r in condition_rows if r["stage"] == "translate"}
-
+    reason = {r["item_id"]: r for r in condition_rows if r.get("stage") == "reason"}
     outcomes = {}
-    for item_id, translate_row in translate_by_item.items():
-        reason_row = reason_by_item.get(item_id)
-        if reason_row is not None:
-            outcomes[item_id] = reason_row["is_correct"]
-        elif translate_row.get("failure_type") in MODEL_CAUSED_TRANSLATION_FAILURES:
+    for r in condition_rows:
+        if r.get("stage") != "translate":
+            continue
+        item_id = r["item_id"]
+        if item_id in reason and isinstance(reason[item_id].get("is_correct"), bool):
+            outcomes[item_id] = reason[item_id]["is_correct"]
+        elif r.get("failure_type") in MODEL_CAUSED_TRANSLATION_FAILURES:
             outcomes[item_id] = False
-        else:
-            outcomes[item_id] = None
     return outcomes
 
 
-def accuracy_table(rows: list[dict], group_keys: tuple) -> dict:
-    """Groups denominator-eligible rows by group_keys (e.g. ("model_key", "condition_key")
-    or ("model_key", "condition_key", "source")) and returns
-    {group: {"correct": int, "total": int}}.
-
-    For A_IE/A_EI, outcomes are reconstructed per item via resolve_condition_outcomes() so
-    model-caused translation failures count as incorrect instead of silently disappearing
-    from the denominator; unresolved (infra/parser-failure) items are excluded here, same
-    as elsewhere, and reported separately by validate().
-    """
-    item_source = {r["item_id"]: r["source"] for r in rows}
-    table = defaultdict(lambda: {"correct": 0, "total": 0})
-    pairs = {(r["model_key"], r["condition_key"]) for r in rows}
-
-    for model_key, condition_key in pairs:
-        outcomes = resolve_condition_outcomes(rows, model_key, condition_key)
-        for item_id, is_correct in outcomes.items():
-            if is_correct is None:
-                continue
-            group_values = {"model_key": model_key, "condition_key": condition_key}
-            if "source" in group_keys:
-                group_values["source"] = item_source.get(item_id)
-            key = tuple(group_values[k] for k in group_keys)
-            table[key]["total"] += 1
-            if is_correct:
-                table[key]["correct"] += 1
-    return dict(table)
+def resolved_accuracy(rows, condition):
+    outcomes = condition_outcomes(rows, condition)
+    correct = sum(value is True for value in outcomes.values())
+    result = {"correct": correct, "total": len(outcomes), "accuracy": correct / len(outcomes) if outcomes else None}
+    result["ci_wilson_95"] = proportion_ci(correct, len(outcomes))
+    return result
 
 
-def rate_table(rows: list[dict], flag_field: str, group_keys: tuple, stage_filter=GRADED_STAGES) -> dict:
-    """Fraction of rows (within `stage_filter`) where rows[flag_field] is truthy, grouped by
-    group_keys. Used for truncation/degeneration rates — these are computed over ALL
-    stage-matching rows (not just the accuracy denominator), since a translate-stage
-    degeneration score is still worth reporting even though it's never auto-classified."""
-    table = defaultdict(lambda: {"flagged": 0, "total": 0})
-    for r in rows:
-        if r["stage"] not in stage_filter:
-            continue
-        if r.get(flag_field) is None:
-            continue
-        key = tuple(r[k] for k in group_keys)
-        table[key]["total"] += 1
-        if r.get(flag_field):
-            table[key]["flagged"] += 1
-    return dict(table)
-
-
-# ---------------- paired comparisons ---------------- #
-
-def paired_comparison(rows: list[dict], model_key: str, cond_a: str, cond_b: str) -> dict | None:
-    """McNemar comparison of two conditions' correctness for one model, paired by item_id.
-    Only items present (and resolved, i.e. not None) in BOTH conditions count. Pivot
-    conditions (A_IE/A_EI) use resolve_condition_outcomes() so a model-caused translation
-    failure counts as incorrect rather than making the item vanish from the pairing."""
-    outcomes_a = resolve_condition_outcomes(rows, model_key, cond_a)
-    outcomes_b = resolve_condition_outcomes(rows, model_key, cond_b)
-    by_item_a = {item_id: v for item_id, v in outcomes_a.items() if v is not None}
-    by_item_b = {item_id: v for item_id, v in outcomes_b.items() if v is not None}
-    shared_items = sorted(set(by_item_a) & set(by_item_b))
-    if not shared_items:
-        return None
-
-    both = a_only = b_only = neither = 0
-    for item_id in shared_items:
-        ca, cb = by_item_a[item_id], by_item_b[item_id]
-        if ca and cb:
-            both += 1
-        elif ca and not cb:
-            a_only += 1
-        elif cb and not ca:
-            b_only += 1
-        else:
-            neither += 1
-
-    # b/c convention: b = correct under cond_b but not cond_a; c = correct under cond_a but not cond_b
-    b, c = b_only, a_only
-    chi2 = mcnemar_chi2_cc(b, c)
-    # Accuracies must be computed over shared_items — the same paired sample McNemar uses —
-    # not over each condition's full independently-available set. If one condition has an
-    # extra item the other lacks, using each condition's own denominator would report an
-    # accuracy difference inconsistent with the paired test's actual sample.
-    acc_a = sum(1 for i in shared_items if by_item_a[i]) / len(shared_items)
-    acc_b = sum(1 for i in shared_items if by_item_b[i]) / len(shared_items)
+def failure_rates(rows):
+    reasoning = [r for r in rows if r.get("stage") in ("reason", "direct")]
+    counts = Counter(r.get("failure_type") or "unknown" for r in reasoning)
+    total = len(reasoning)
+    trunc = sum(bool(r.get("is_truncated")) for r in reasoning)
+    degeneration = sum(bool(r.get("degeneration_candidate")) for r in reasoning)
+    no_answer = sum(r.get("failure_type") == "missing_answer" for r in reasoning)
+    format_fail = sum(r.get("format_compliant") is False for r in reasoning)
+    def rate(value):
+        return value / total if total else None
     return {
-        "n_paired": len(shared_items), "both": both, "a_only": a_only, "b_only": b_only,
-        "neither": neither, "discordant_b": b, "discordant_c": c,
-        "p_exact": mcnemar_exact(b, c), "chi2_cc": chi2, "p_chi2": chi2_sf_df1(chi2),
-        "accuracy_a": acc_a * 100, "accuracy_b": acc_b * 100,
-        "paired_diff_pp": (acc_b - acc_a) * 100,
+        "total_reasoning_or_direct_records": total,
+        "failure_type_counts": dict(sorted(counts.items())),
+        "failure_type_rates": {key: rate(value) for key, value in sorted(counts.items())},
+        "truncated_count": trunc,
+        "truncated_rate": rate(trunc),
+        "degeneration_candidate_count": degeneration,
+        "degeneration_candidate_rate": rate(degeneration),
+        "missing_answer_count": no_answer,
+        "missing_answer_rate": rate(no_answer),
+        "format_noncompliant_count": format_fail,
+        "format_noncompliant_rate": rate(format_fail),
     }
 
 
+def token_stats(rows):
+    fields = [
+        "input_tokens", "output_tokens", "question_en_tokens", "question_ilo_tokens",
+        "translation_tokens", "rationale_tokens", "tokenization_tax_ratio", "word_count",
+        "char_count", "latency_ms", "retry_count", "repetition_ratio",
+    ]
+    output = {}
+    for field in fields:
+        values = [r[field] for r in rows if isinstance(r.get(field), (int, float)) and not isinstance(r.get(field), bool)]
+        output[field] = {"n": len(values), "mean": mean_or_none(values), "median": median_or_none(values)}
+    return output
+
+
+def translation_stats(rows):
+    translations = [r for r in rows if r.get("stage") == "translate"]
+    counts = Counter(r.get("failure_type") or "unknown" for r in translations)
+    completed = sum(r.get("failure_type") == "translation_completed" for r in translations)
+    return {
+        "total_translation_records": len(translations),
+        "completed": completed,
+        "completion_rate": completed / len(translations) if translations else None,
+        "status_counts": dict(sorted(counts.items())),
+        "token_stats": token_stats(translations),
+        "faithfulness_annotation_status": "not performed; requires human review",
+    }
+
+
+def tiktoken_analysis(records_by_model, dataset_path=DEFAULT_DATASET):
+    """Recompute comparable token statistics for every model with the repo tokenizer module.
+
+    The evaluation's native counts remain in the report for model-specific accounting. This
+    second pass uses the existing evaluate/tokenization.py implementation and cl100k_base for
+    all three models, so cross-model tokenization comparisons do not mix tokenizers.
+    """
+    try:
+        import sys
+        scripts_dir = os.path.dirname(os.path.abspath(__file__))
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        from evaluate import tokenization
+    except (ImportError, ModuleNotFoundError) as exc:
+        return {"available": False, "error": str(exc)}
+
+    dataset = {}
+    with open(dataset_path, encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                row = json.loads(line)
+                dataset[row["id"]] = row
+
+    def clean_rationale(text):
+        if not text:
+            return ""
+        return re.sub(r"<answer>.*?</answer>", "", text, flags=re.IGNORECASE | re.DOTALL).strip()
+
+    def summary(values):
+        return {"n": len(values), "mean": mean_or_none(values), "median": median_or_none(values)}
+
+    fields = [
+        "input_tokens", "output_tokens", "question_en_tokens", "question_ilo_tokens",
+        "translation_tokens", "rationale_tokens", "tokenization_tax_ratio", "word_count", "char_count",
+    ]
+    output = {}
+    for model, rows in records_by_model.items():
+        by_condition = defaultdict(list)
+        for row in rows:
+            item = dataset[row["item_id"]]
+            question_en = item["question_en"]
+            question_ilo = item["question_ilo"]
+            translation = row.get("generated_translation") or ""
+            raw_response = row.get("raw_response") or ""
+            # Translation-stage raw_response is the translation itself, not a reasoning
+            # rationale. Count rationale tokens only for reasoning/direct records; using
+            # raw_response as a fallback here would double-count translation text as rationale.
+            rationale_source = row.get("generated_rationale") if row.get("stage") in ("reason", "direct") else ""
+            rationale = clean_rationale(rationale_source)
+            q_en = tokenization.count_tokens_tiktoken(question_en)
+            q_ilo = tokenization.count_tokens_tiktoken(question_ilo)
+            record = {
+                "item_id": row["item_id"],
+                "input_tokens": tokenization.count_tokens_tiktoken(row.get("original_input") or ""),
+                "output_tokens": tokenization.count_tokens_tiktoken(raw_response),
+                "question_en_tokens": q_en,
+                "question_ilo_tokens": q_ilo,
+                "translation_tokens": tokenization.count_tokens_tiktoken(translation) if translation else None,
+                "rationale_tokens": tokenization.count_tokens_tiktoken(rationale) if rationale else None,
+                "tokenization_tax_ratio": q_ilo / q_en if q_en else None,
+                "word_count": len(raw_response.split()),
+                "char_count": len(raw_response),
+            }
+            by_condition[row["condition_key"]].append(record)
+        output[model] = {}
+        for condition in ALL_CONDITIONS:
+            condition_rows = by_condition.get(condition, [])
+            question_by_item = {}
+            for row in condition_rows:
+                question_by_item.setdefault(row["item_id"], row)
+            stats = {field: summary([r[field] for r in condition_rows if r[field] is not None]) for field in fields}
+            for field in ("question_en_tokens", "question_ilo_tokens", "tokenization_tax_ratio"):
+                stats[field] = summary([r[field] for r in question_by_item.values() if r[field] is not None])
+            output[model][condition] = stats
+    return {
+        "available": True,
+        "encoding": tokenization.TIKTOKEN_ENCODING,
+        "tiktoken_version": tokenization.tiktoken.__version__,
+        "note": "Recomputed from saved dataset and model outputs for all three current models using one shared tiktoken encoding. Native counts remain for model-specific context accounting.",
+        "models": output,
+    }
+
+
+def build_analysis(records_by_model):
+    index = {}
+    inventory = {}
+    for model, rows in records_by_model.items():
+        local = defaultdict(dict)
+        duplicates = 0
+        for row in rows:
+            key = (row.get("condition_key"), row.get("stage"), row.get("item_id"))
+            if key in local[row.get("condition_key"), row.get("stage")]:
+                duplicates += 1
+            local[row.get("condition_key"), row.get("stage")][row.get("item_id")] = row
+        for (condition, stage), by_item in local.items():
+            index[(model, condition, stage)] = by_item
+        inventory[model] = {
+            "display_name": MODEL_NAMES.get(model, model),
+            "records": len(rows),
+            "duplicate_records_replaced": duplicates,
+            "conditions": {},
+        }
+        for condition in ALL_CONDITIONS:
+            condition_rows = [r for r in rows if r.get("condition_key") == condition and r.get("stage") in ("reason", "direct")]
+            translation_rows = [r for r in rows if r.get("condition_key") == condition and r.get("stage") == "translate"]
+            inventory[model]["conditions"][condition] = {
+                "reason_or_direct_records": len(condition_rows),
+                "translation_records": len(translation_rows),
+                "missing_reason_or_direct_from_1000": max(0, 1000 - len(condition_rows)) if condition in PRIMARY_CONDITIONS else None,
+                "accuracy": resolved_accuracy(rows, condition),
+                "failure_rates": failure_rates(condition_rows),
+                "token_stats": token_stats(condition_rows),
+                "translation_stats": translation_stats(translation_rows),
+            }
+
+    results = {"inventory": inventory, "models": {}}
+    for model in records_by_model:
+        model_rows = records_by_model[model]
+        conditions = inventory[model]["conditions"]
+        model_result = {
+            "display_name": MODEL_NAMES.get(model, model),
+            "accuracy": {c: conditions[c]["accuracy"] for c in ALL_CONDITIONS},
+            "failure_rates": {c: conditions[c]["failure_rates"] for c in ALL_CONDITIONS},
+            "token_stats": {c: conditions[c]["token_stats"] for c in ALL_CONDITIONS},
+            "translation_stats": {c: conditions[c]["translation_stats"] for c in ["A_IE", "A_EI"]},
+            "domain_accuracy": {},
+            "paired_comparisons": {},
+            "legacy_trt_deltas": {},
+        }
+        sources = sorted({r.get("source", "unknown") for r in model_rows})
+        for source in sources:
+            model_result["domain_accuracy"][source] = {}
+            for condition in ALL_CONDITIONS:
+                source_ids = {r.get("item_id") for r in model_rows if r.get("source") == source}
+                outcomes = {item_id: value for item_id, value in condition_outcomes(model_rows, condition).items() if item_id in source_ids}
+                correct = sum(value is True for value in outcomes.values())
+                model_result["domain_accuracy"][source][condition] = {
+                    "correct": correct,
+                    "total": len(outcomes),
+                    "accuracy": correct / len(outcomes) if outcomes else None,
+                    "ci_wilson_95": proportion_ci(correct, len(outcomes)),
+                }
+        p = {c: conditions[c]["accuracy"]["accuracy"] for c in PRIMARY_CONDITIONS}
+        if p["A_IE"] is not None and p["A_II"] is not None:
+            model_result["legacy_trt_deltas"]["total_language_gap_AEE_minus_AII"] = p["A_EE"] - p["A_II"]
+            model_result["legacy_trt_deltas"]["reasoning_penalty_AIE_minus_AII"] = p["A_IE"] - p["A_II"]
+            model_result["legacy_trt_deltas"]["comprehension_penalty_AEE_minus_AIE"] = p["A_EE"] - p["A_IE"]
+            model_result["legacy_trt_deltas"]["relative_reasoning_degradation"] = ((p["A_IE"] - p["A_II"]) / p["A_IE"]) if p["A_IE"] else None
+        pvals = {}
+        for first, second, label in COMPARISONS:
+            comparison = paired_test(index, model, first, second, seed=42 + len(model_result["paired_comparisons"]))
+            model_result["paired_comparisons"][label] = comparison
+            pvals[label] = comparison["mcnemar_exact_p"]
+        adjusted = holm_adjust(pvals)
+        for label, value in adjusted.items():
+            model_result["paired_comparisons"][label]["mcnemar_exact_p_holm"] = value
+        results["models"][model] = model_result
+    return results
+
+
+def pct(value):
+    return "n/a" if value is None else f"{100 * value:.1f}%"
+
+
+def signed_pp(value):
+    return "n/a" if value is None else f"{100 * value:+.1f} pp"
+
+
+def render_markdown(results):
+    lines = [
+        "# Numerical Analysis — 3-Pass Cross-Lingual Reasoning (Ilokano vs. English)",
+        "",
+        "Historical three-pass analysis retained for reference. Claude Sonnet 4.6 and Llama 3 8B are no longer part of the current model comparison; the active analysis uses GPT-5.2, Qwen3.6-27B, and Qwen-SEA-LION-v4.5-27B-IT.",
+        "",
+        "**Historical passes.** P1 = English question → English reasoning (baseline). P2 = Ilokano question → reasoning entirely in Ilokano (native). P3 = Ilokano question → translate to English, then reason in English (pivot). A pass without a usable answer counted as incorrect.",
+        "",
+        "| Historical model | P1 English | P2 Native Ilokano | P3 English Pivot | Δ_total | Δ_comp | Δ_reason | D_rel |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "| Claude Sonnet 4.6 | 96.3% | 88.4% | 90.5% | +7.9 pp | +5.8 pp | +2.1 pp | 2.3% |",
+        "| Llama 3 8B | 62.6% | 19.2% | 26.3% | +43.4 pp | +36.3 pp | +7.1 pp | 27.0% |",
+        "",
+        "Historical passes with no extractable answer: Claude P1/P2/P3 = 0/6/2; Llama P1/P2/P3 = 25/146/23.",
+        "",
+        "Historical per-source accuracy:",
+        "",
+        "| Model | Source | P1 | P2 | P3 | Δ_reason (P3−P2) |",
+        "|---|---|---:|---:|---:|---:|",
+        "| Claude | BBH causal judgement (n=50) | 64.0% | 58.0% | 50.0% | -8.0 pp |",
+        "| Claude | BBH logical deduction (n=250) | 100.0% | 90.4% | 92.4% | +2.0 pp |",
+        "| Claude | GSM8K (n=400) | 97.8% | 91.2% | 94.0% | +2.8 pp |",
+        "| Claude | MMLU conceptual physics (n=174) | 97.1% | 88.5% | 91.4% | +2.9 pp |",
+        "| Claude | MMLU formal logic (n=126) | 96.0% | 87.3% | 90.5% | +3.2 pp |",
+        "| Llama | BBH causal judgement (n=50) | 48.0% | 54.0% | 38.0% | -16.0 pp |",
+        "| Llama | BBH logical deduction (n=250) | 52.8% | 29.2% | 31.6% | +2.4 pp |",
+        "| Llama | GSM8K (n=400) | 80.8% | 8.2% | 20.0% | +11.8 pp |",
+        "| Llama | MMLU conceptual physics (n=174) | 56.9% | 20.1% | 31.0% | +10.9 pp |",
+        "| Llama | MMLU formal logic (n=126) | 38.1% | 19.0% | 24.6% | +5.6 pp |",
+        "",
+        "The historical P2-vs-P3 McNemar exact two-sided p-values were 3.142e-02 for Claude and 1.212e-05 for Llama. Those models are retained here only as historical context, not pooled with the active results.",
+        "",
+        "---",
+        "",
+        "# TRT Metrics — GPT-5.2, Qwen3.6-27B, and Qwen-SEA-LION",
+        "",
+        "This report analyzes the six-condition evaluator outputs. Human-reviewed translation faithfulness and error taxonomy are excluded.",
+        "Model-caused pivot translation failures count as end-to-end failures. Missing reasoning records caused by those failures are excluded from reasoning-only paired comparisons.",
+        "",
+        "## Current evaluation conditions",
+        "",
+        "The original three-pass design remains identifiable in the current protocol:",
+        "",
+        "- `A_EE` / P1: English input → English reasoning baseline.",
+        "- `A_II` / P2: Ilokano input → Ilokano reasoning.",
+        "- `A_IE` / P3: Ilokano input → separate English translation → fresh-context English reasoning.",
+        "- `A_EI`: English input → separate Ilokano translation → fresh-context Ilokano reasoning (reverse pivot).",
+        "- `A_E0` and `A_I0`: direct-answer controls on the fixed 300-item subset.",
+        "",
+        "For `A_IE` and `A_EI`, translation and reasoning are separate result records. Translation faithfulness is not automatically inferred; only translation-stage completion and model-caused translation failures are reported here.",
+        "",
+        "## Result inventory",
+        "",
+        "| Model | Records | Condition completeness |",
+        "|---|---:|---|",
+    ]
+    for model, inv in results["inventory"].items():
+        completeness = ", ".join(f"{c}={v['reason_or_direct_records']}" for c, v in inv["conditions"].items() if c in PRIMARY_CONDITIONS)
+        lines.append(f"| {inv['display_name']} | {inv['records']} | {completeness} reasoning/direct records |")
+
+    lines += ["", "## Accuracy by model and condition", "", "| Model | A_EE | A_II | A_IE | A_EI | A_E0 | A_I0 |", "|---|---:|---:|---:|---:|---:|---:|"]
+    for model, result in results["models"].items():
+        cells = [pct(result["accuracy"][c]["accuracy"]) for c in ALL_CONDITIONS]
+        lines.append(f"| {result['display_name']} | " + " | ".join(cells) + " |")
+
+    lines += ["", "## Paired gaps and McNemar tests", "", "| Model | Comparison | n | Accuracy difference | Bootstrap 95% CI | Exact p | Holm p |", "|---|---|---:|---:|---:|---:|---:|"]
+    for model, result in results["models"].items():
+        for _, _, label in COMPARISONS:
+            c = result["paired_comparisons"][label]
+            ci = c["delta_ci_bootstrap_95"]
+            ci_text = "n/a" if ci["low"] is None else f"[{signed_pp(ci['low'])}, {signed_pp(ci['high'])}]"
+            lines.append(f"| {result['display_name']} | {label} | {c['n_paired']} | {signed_pp(c['delta_first_minus_second'])} | {ci_text} | {c['mcnemar_exact_p']:.3e} | {c['mcnemar_exact_p_holm']:.3e} |")
+
+    lines += ["", "## Legacy TRT deltas", "", "| Model | Total language gap AEE-AII | Reasoning penalty AIE-AII | Comprehension penalty AEE-AIE | Relative reasoning degradation |", "|---|---:|---:|---:|---:|"]
+    for model, result in results["models"].items():
+        d = result["legacy_trt_deltas"]
+        lines.append(f"| {result['display_name']} | {signed_pp(d.get('total_language_gap_AEE_minus_AII'))} | {signed_pp(d.get('reasoning_penalty_AIE_minus_AII'))} | {signed_pp(d.get('comprehension_penalty_AEE_minus_AIE'))} | {pct(d.get('relative_reasoning_degradation'))} |")
+
+    lines += ["", "## Item-level pivot recovery and regression", "", "The `pivot_recovery` comparison is A_IE versus A_II. `first_only_correct` means pivot correct/native incorrect; `second_only_correct` means native correct/pivot incorrect.", "", "| Model | Paired items | Recovered | Regressed | Both correct | Both incorrect |", "|---|---:|---:|---:|---:|---:|"]
+    for model, result in results["models"].items():
+        c = result["paired_comparisons"]["pivot_recovery"]
+        lines.append(f"| {result['display_name']} | {c['n_paired']} | {c['first_only_correct']} | {c['second_only_correct']} | {c['both_correct']} | {c['both_incorrect']} |")
+
+    lines += ["", "## Domain-level accuracy", ""]
+    for model, result in results["models"].items():
+        lines += [f"### {result['display_name']}", "", "| Source | A_EE | A_II | A_IE | A_EI |", "|---|---:|---:|---:|---:|"]
+        for source, conditions in result["domain_accuracy"].items():
+            lines.append(f"| {source} | " + " | ".join(pct(conditions[c]["accuracy"]) for c in PRIMARY_CONDITIONS) + " |")
+        lines.append("")
+
+    lines += ["## Failure rates", "", "Failure rates are calculated over available reasoning/direct records for each condition.", "", "| Model | Condition | n | Wrong/substantive | Missing answer | Truncated | Degeneration candidate | Format noncompliant |", "|---|---|---:|---:|---:|---:|---:|---:|"]
+    for model, result in results["models"].items():
+        for condition in PRIMARY_CONDITIONS:
+            f = result["failure_rates"][condition]
+            wrong = f["failure_type_rates"].get("substantively_incorrect", 0)
+            lines.append(f"| {result['display_name']} | {condition} | {f['total_reasoning_or_direct_records']} | {pct(wrong)} | {pct(f['missing_answer_rate'])} | {pct(f['truncated_rate'])} | {pct(f['degeneration_candidate_rate'])} | {pct(f['format_noncompliant_rate'])} |")
+
+    lines += ["", "## Pivot translation-stage completion and missing reasoning records", "", "A translation-stage truncation/refusal/format failure is counted as an end-to-end failure for the pivot condition. Because no reasoning call can validly consume an unusable translation, the corresponding reasoning record is absent and is excluded from reasoning-only paired tests. In the current files, every missing `A_EI` reasoning record is explained by a translation-stage truncation (`failure_type=truncation`, `finish_reason=length`); no missing record is attributed to an API or parser failure.", "", "| Model | A_IE completed/total | A_EI completed/total | Missing A_EI reasoning | Cause |", "|---|---:|---:|---:|---|"]
+    for model, result in results["models"].items():
+        values = []
+        for c in ("A_IE", "A_EI"):
+            t = result["translation_stats"][c]
+            values.append(f"{t['completed']}/{t['total_translation_records']} ({pct(t['completion_rate'])})")
+        missing_reason = results["inventory"][model]["conditions"]["A_EI"]["translation_records"] - results["inventory"][model]["conditions"]["A_EI"]["reason_or_direct_records"]
+        cause = "none" if missing_reason == 0 else "translation truncation"
+        lines.append(f"| {result['display_name']} | {values[0]} | {values[1]} | {missing_reason} | {cause} |")
+
+    lines += ["", "## Tokenization and output statistics", "", "The JSON report contains mean, median, and sample count for input/output tokens, question token counts, translation/rationale tokens, tokenization-tax ratio, latency, retries, repetition ratio, word count, and character count for every model and condition.", "", "| Model | Condition | Question EN tokens (mean) | Question ILO tokens (mean) | Tax ratio (mean) | Rationale tokens (mean) | Output tokens (mean) |", "|---|---|---:|---:|---:|---:|---:|"]
+    for model, result in results["models"].items():
+        for c in PRIMARY_CONDITIONS:
+            t = result["token_stats"][c]
+            vals = [t[field]["mean"] for field in ("question_en_tokens", "question_ilo_tokens", "tokenization_tax_ratio", "rationale_tokens", "output_tokens")]
+            rendered = ["n/a" if v is None else f"{v:.2f}" for v in vals]
+            lines.append(f"| {result['display_name']} | {c} | " + " | ".join(rendered) + " |")
+
+    tiktoken = results.get("tiktoken_analysis", {})
+    if tiktoken.get("available"):
+        lines += [
+            "", "## Tiktoken-based tokenization rerun", "",
+            f"The original evaluation used native tokenizers for the Qwen runs and `{tiktoken['encoding']}` for GPT. For comparable cross-model statistics, the saved dataset and outputs were recomputed with `{tiktoken['encoding']}` (tiktoken {tiktoken['tiktoken_version']}) through `scripts/evaluate/tokenization.py`. These replace mixed-tokenizer values for comparative tokenization claims; native counts remain in the JSON records for model-specific context accounting.",
+            "",
+            "| Model | Condition | English question tokens (mean) | Ilokano question tokens (mean) | Tokenization ratio (mean) | Translation tokens (mean) | Rationale tokens (mean) | Output tokens (mean) |",
+            "|---|---|---:|---:|---:|---:|---:|---:|",
+        ]
+        for model, conditions in tiktoken["models"].items():
+            for condition in PRIMARY_CONDITIONS:
+                cell = conditions[condition]
+                def fmt(field):
+                    value = cell[field]["mean"]
+                    return "n/a" if value is None else f"{value:.2f}"
+                lines.append("| " + " | ".join([
+                    results["models"][model]["display_name"], condition,
+                    fmt("question_en_tokens"), fmt("question_ilo_tokens"),
+                    fmt("tokenization_tax_ratio"), fmt("translation_tokens"),
+                    fmt("rationale_tokens"), fmt("output_tokens"),
+                ]) + " |")
+
+    lines += ["", "## Scope limitation", "", "Translation faithfulness, semantic adequacy, and detailed linguistic error taxonomy are not automatically judged. The separate translation and reasoning outputs are preserved for a later human annotation pass.", ""]
+    return "\n".join(lines)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Analyze a staged, six-condition evaluation run.")
-    parser.add_argument("run_id", nargs="?", help="run_id under text_track/data/eval_runs/")
-    parser.add_argument("--path", help="Explicit path to a result JSONL, instead of run_id.")
-    parser.add_argument(
-        "--strict", action="store_true",
-        help="Exit with an error instead of a warning if infrastructure/parser failures "
-             "or duplicate keys are found (i.e. refuse to report numbers until rerun).",
-    )
-    parser.add_argument(
-        "--manifest", help="Explicit path to a run manifest.json. Required for experiment "
-        "completeness checking when using --path with a JSONL that has no sibling "
-        "<name>.manifest.json next to it (e.g. HPC results copied without their manifest) "
-        "— under --strict, a missing manifest is fatal.",
-    )
-    parser.add_argument(
-        "--output", help="Output path for the analysis report. Defaults to "
-        "text_track/data/analyses/<run_id>_analysis.md — never overwrites the preserved "
-        "legacy text_track/data/analysis.md artifact.",
-    )
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output-md", default=DEFAULT_OUTPUT_MD)
+    parser.add_argument("--output-json", default=DEFAULT_OUTPUT_JSON)
     args = parser.parse_args()
 
-    if not args.run_id and not args.path:
-        parser.error("Provide a run_id or --path.")
-    path = args.path or os.path.join(RUNS_DIR, f"{args.run_id}.jsonl")
-    rows = load_rows(path) if args.path else load_run(args.run_id)
+    records_by_model = {}
+    for model, path in DEFAULT_INPUTS.items():
+        if not os.path.exists(path):
+            raise FileNotFoundError(path)
+        records_by_model[model] = load_records(path)
 
-    if args.output:
-        out_path = args.output
-    else:
-        stem = args.run_id or os.path.splitext(os.path.basename(path))[0]
-        out_path = os.path.join(ANALYSES_DIR, f"{stem}_analysis.md")
-    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-
-    manifest = None
-    manifest_warnings = []
-    if args.path:
-        manifest_path = args.manifest or (os.path.splitext(args.path)[0] + ".manifest.json")
-        try:
-            with open(manifest_path, encoding="utf-8") as f:
-                manifest = json.load(f)
-        except FileNotFoundError:
-            manifest_warnings.append(
-                f"no manifest found at {manifest_path!r} — experiment completeness cannot "
-                f"be checked. Pass --manifest explicitly, or place a sibling "
-                f"<name>.manifest.json next to the JSONL."
-            )
-    else:
-        try:
-            manifest = load_manifest(args.run_id)
-        except FileNotFoundError:
-            manifest_warnings.append(
-                f"no manifest found for run_id {args.run_id!r} — experiment completeness "
-                f"cannot be checked."
-            )
-
-    warnings = manifest_warnings + validate(rows, manifest)
-    for w in warnings:
-        print(f"WARNING: {w}")
-    if warnings and args.strict:
-        print("\n--strict was given: refusing to report numbers until the above are resolved.")
-        sys.exit(1)
-
-    models = sorted({r["model_key"] for r in rows})
-    conditions_present = sorted({r["condition_key"] for r in rows}, key=lambda c: ALL_REASONING_CONDITIONS.index(c) if c in ALL_REASONING_CONDITIONS else 99)
-    sources = sorted({r["source"] for r in rows})
-
-    acc_by_model_cond = accuracy_table(rows, ("model_key", "condition_key"))
-    acc_by_model_cond_source = accuracy_table(rows, ("model_key", "condition_key", "source"))
-    trunc_by_model_cond = rate_table(rows, "is_truncated", ("model_key", "condition_key"))
-    degen_by_model_cond = rate_table(rows, "degeneration_candidate", ("model_key", "condition_key"))
-    degen_by_model_cond_source = rate_table(rows, "degeneration_candidate", ("model_key", "condition_key", "source"))
-
-    def pct(cell):
-        return (cell["correct"] / cell["total"] * 100) if cell["total"] else 0.0
-
-    def rate_pct(cell):
-        return (cell["flagged"] / cell["total"] * 100) if cell["total"] else 0.0
-
-    L = []
-    W = L.append
-    W("# Numerical Analysis — Staged Six-Condition Cross-Lingual Reasoning\n")
-    W(f"Source file: `{path}` — **{len(rows)} records**, models: {', '.join(models)}, "
-      f"conditions present: {', '.join(conditions_present)}, sources: {', '.join(sources)}.\n")
-    if warnings:
-        W("**Validation warnings** (see console output above) — numbers below exclude "
-          "infrastructure/parser failures from the denominator entirely rather than "
-          "silently counting them as model errors:\n")
-        for w in warnings:
-            W(f"- {w}")
-        W("")
-
-    # 1. Accuracy by model x condition
-    W("## 1. Accuracy by model and condition\n")
-    W("Denominator: one resolved condition-level outcome per planned item. For pivot "
-      "conditions (`A_IE`/`A_EI`), model-caused translation failures (format failure, "
-      "truncation, refusal) count as incorrect; infrastructure and parser failures remain "
-      "unresolved and are excluded. For all conditions, truncation, repetition "
-      "degeneration, refusal, missing-answer, and invalid-format all count as incorrect, "
-      "per the is_correct semantics in grading.py.\n")
-    header = "| Model | " + " | ".join(conditions_present) + " |"
-    W(header)
-    W("|---|" + "---|" * len(conditions_present))
-    for mk in models:
-        cells = []
-        for ck in conditions_present:
-            c = acc_by_model_cond.get((mk, ck), {"correct": 0, "total": 0})
-            lo, hi = wilson_ci(c["correct"], c["total"])
-            cells.append(f"{c['correct']}/{c['total']} ({pct(c):.1f}%, 95% CI {lo*100:.1f}-{hi*100:.1f})")
-        W(f"| {mk} | " + " | ".join(cells) + " |")
-    W("")
-
-    # 2. Truncation / degeneration rates
-    W("## 2. Truncation and repetition-degeneration rates\n")
-    W("Computed over reason/direct-stage records (denominator-eligible), independent of "
-      "final failure_type — a record can be both truncated and flagged as a degeneration "
-      "candidate; both facts are counted here separately.\n")
-    W("| Model | Condition | Truncation rate | Degeneration-candidate rate |")
-    W("|---|---|---|---|")
-    for mk in models:
-        for ck in conditions_present:
-            t = trunc_by_model_cond.get((mk, ck), {"flagged": 0, "total": 0})
-            d = degen_by_model_cond.get((mk, ck), {"flagged": 0, "total": 0})
-            if t["total"] == 0 and d["total"] == 0:
-                continue
-            W(f"| {mk} | {ck} | {t['flagged']}/{t['total']} ({rate_pct(t):.1f}%) "
-              f"| {d['flagged']}/{d['total']} ({rate_pct(d):.1f}%) |")
-    W("")
-    W("### By source\n")
-    W("| Model | Condition | Source | Degeneration-candidate rate |")
-    W("|---|---|---|---|")
-    for (mk, ck, src), d in sorted(degen_by_model_cond_source.items()):
-        if d["total"] == 0:
-            continue
-        W(f"| {mk} | {ck} | {src} | {d['flagged']}/{d['total']} ({rate_pct(d):.1f}%) |")
-    W("")
-    W("**Reminder**: `degeneration_candidate` is an automatic flag against "
-      "`grading.REPETITION_DEGENERATION_THRESHOLD` (0.30, calibrated from 80 real pilot "
-      "outputs — see PROTOCOL.md section 3). It is still a heuristic flag, not a confirmed "
-      "human classification — treat the rates above as candidates for review, not a final "
-      "degeneration rate.\n")
-
-    # 3. Primary paired comparisons
-    W("## 3. Primary accuracy comparisons (paired, McNemar)\n")
-    W("Per PROTOCOL.md section 6: `A_EE` vs `A_II` (overall language gap), `A_II` vs `A_IE` "
-      "(English-pivot benefit), `A_EE` vs `A_IE` (remaining pivot gap). Paired by item_id "
-      "within each model, since every condition runs over the same item IDs.\n")
-    W("**Holm correction scope**: applied *per model*, across that model's 3 primary "
-      "comparisons — not pooled across models. Each model is evaluated as its own family "
-      "of hypotheses; a p-value from `qwen_3_6_27b` never affects the adjusted threshold "
-      "for `claude_sonnet_4_6`. This is a deliberate, pre-registered choice, stated here "
-      "explicitly per PROTOCOL.md.\n")
-    for mk in models:
-        comparisons = []
-        for cond_a, cond_b, label in PRIMARY_COMPARISONS:
-            if cond_a not in conditions_present or cond_b not in conditions_present:
-                continue
-            result = paired_comparison(rows, mk, cond_a, cond_b)
-            if result is None:
-                continue
-            comparisons.append((cond_a, cond_b, label, result))
-        if not comparisons:
-            continue
-        W(f"### {mk}\n")
-        p_values = [r["p_exact"] for _, _, _, r in comparisons]
-        holm = holm_adjust(p_values)
-        W("| Comparison | n paired | Acc A | Acc B | Diff (pp) | Discordant (b,c) | "
-          "Exact p | Holm-adjusted p |")
-        W("|---|---|---|---|---|---|---|---|")
-        for (cond_a, cond_b, label, r), p_holm in zip(comparisons, holm):
-            W(f"| {cond_a} vs {cond_b} ({label}) | {r['n_paired']} | {r['accuracy_a']:.1f}% "
-              f"| {r['accuracy_b']:.1f}% | {r['paired_diff_pp']:+.1f} "
-              f"| ({r['discordant_b']}, {r['discordant_c']}) | {r['p_exact']:.3e} "
-              f"| {p_holm:.3e} |")
-        W("")
-
-    # 4. Per-source accuracy
-    W("## 4. Accuracy by source\n")
-    W("**Descriptive only** — no per-source paired McNemar test is computed. Several "
-      "sources have small cells (e.g. `bbh_causal_judgement` n=15/50), where an exact "
-      "binomial test would have very low power and a non-significant result would be "
-      "uninformative rather than a genuine null finding. Per-source results below are "
-      "reported as accuracy breakdowns for descriptive/exploratory purposes only; the "
-      "pre-registered primary inferential comparisons are the pooled ones in section 3.\n")
-    for mk in models:
-        W(f"### {mk}\n")
-        W("| Source | " + " | ".join(conditions_present) + " |")
-        W("|---|" + "---|" * len(conditions_present))
-        for src in sources:
-            cells = []
-            for ck in conditions_present:
-                c = acc_by_model_cond_source.get((mk, ck, src), {"correct": 0, "total": 0})
-                cells.append(f"{c['correct']}/{c['total']} ({pct(c):.1f}%)" if c["total"] else "—")
-            W(f"| {src} | " + " | ".join(cells) + " |")
-        W("")
-
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(L) + "\n")
-    print(f"\nWrote {out_path}")
+    result = build_analysis(records_by_model)
+    result["tiktoken_analysis"] = tiktoken_analysis(records_by_model)
+    result["metadata"] = {
+        "models": list(records_by_model),
+        "input_files": DEFAULT_INPUTS,
+        "primary_conditions": PRIMARY_CONDITIONS,
+        "all_conditions": ALL_CONDITIONS,
+        "comparisons": [{"first": a, "second": b, "label": label} for a, b, label in COMPARISONS],
+        "bootstrap_iterations": 10000,
+        "bootstrap_seed": 42,
+        "human_error_taxonomy": "excluded",
+    }
+    with open(args.output_json, "w", encoding="utf-8") as handle:
+        json.dump(result, handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+    with open(args.output_md, "w", encoding="utf-8") as handle:
+        handle.write(render_markdown(result))
+        handle.write("\n")
+    print(f"Wrote {args.output_md}")
+    print(f"Wrote {args.output_json}")
+    for model, inv in result["inventory"].items():
+        print(model, inv["records"], {c: inv["conditions"][c]["reason_or_direct_records"] for c in PRIMARY_CONDITIONS})
 
 
 if __name__ == "__main__":

@@ -1,526 +1,103 @@
-"""Tests for analyze.py's core functions, plus a few CLI-level tests for --path/--manifest
-completeness wiring (these always pass --output to a temp dir and never touch the real
-text_track/data/analysis.md / evaluation_results.jsonl, which are preserved as preliminary
-artifacts from the old 3-pass pipeline per the conference plan's file priorities: "Do not
-combine old and new experimental results.")
-"""
-import json
+"""Unit tests for the current flat-JSONL text-track analyzer."""
+
+from __future__ import annotations
+
 import os
-import shutil
 import sys
-import tempfile
 import unittest
+
 
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, SCRIPTS_DIR)
 import analyze  # noqa: E402
 
 
-def _row(**overrides):
-    defaults = dict(
-        run_id="run-1", item_id="gsm8k_0", model_key="claude_sonnet_4_6",
-        condition_key="A_EE", stage="reason", source="gsm8k", is_correct=True,
-        is_truncated=False, repetition_ratio=0.0, degeneration_candidate=False,
-        failure_type="correct", protocol_version="protocol_v2", evaluator_version="evaluator_v4",
-        raw_response="<answer>109</answer>",
-    )
-    defaults.update(overrides)
-    return defaults
+def row(*, item_id="item-1", condition_key="A_EE", stage="reason", is_correct=True,
+        failure_type="correct", **extra):
+    value = {
+        "item_id": item_id,
+        "condition_key": condition_key,
+        "stage": stage,
+        "is_correct": is_correct,
+        "failure_type": failure_type,
+    }
+    value.update(extra)
+    return value
 
 
-class AccuracyDenominatorTests(unittest.TestCase):
-    def test_reason_stage_with_correctness_is_in_denominator(self):
-        self.assertTrue(analyze.in_accuracy_denominator(_row(stage="reason", is_correct=False)))
+class AccuracyTests(unittest.TestCase):
+    def test_accuracy_counts_boolean_results_and_wilson_interval(self):
+        result = analyze.accuracy([
+            row(is_correct=True),
+            row(item_id="item-2", is_correct=False, failure_type="substantively_incorrect"),
+            row(item_id="item-3", is_correct=None),
+        ])
+        self.assertEqual(result["correct"], 1)
+        self.assertEqual(result["total"], 2)
+        self.assertAlmostEqual(result["accuracy"], 0.5)
+        self.assertIsNotNone(result["ci_wilson_95"]["low"])
 
-    def test_direct_stage_with_correctness_is_in_denominator(self):
-        self.assertTrue(analyze.in_accuracy_denominator(_row(stage="direct", is_correct=True)))
+    def test_pivot_translation_failure_is_end_to_end_incorrect(self):
+        outcomes = analyze.condition_outcomes([
+            row(condition_key="A_IE", stage="translate", is_correct=None,
+                failure_type="truncation"),
+        ], "A_IE")
+        self.assertEqual(outcomes, {"item-1": False})
 
-    def test_translate_stage_never_in_denominator(self):
-        row = _row(stage="translate", is_correct=None)
-        self.assertFalse(analyze.in_accuracy_denominator(row))
+    def test_completed_pivot_uses_reasoning_outcome(self):
+        outcomes = analyze.condition_outcomes([
+            row(condition_key="A_IE", stage="translate", is_correct=None,
+                failure_type="translation_completed"),
+            row(condition_key="A_IE", stage="reason", is_correct=True),
+        ], "A_IE")
+        self.assertEqual(outcomes, {"item-1": True})
 
-    def test_infrastructure_failure_not_in_denominator(self):
-        row = _row(stage="reason", is_correct=None, failure_type="infrastructure_api_failure")
-        self.assertFalse(analyze.in_accuracy_denominator(row))
-
-    def test_parser_failure_not_in_denominator(self):
-        row = _row(stage="reason", is_correct=None, failure_type="parser_failure")
-        self.assertFalse(analyze.in_accuracy_denominator(row))
-
-    def test_truncation_refusal_missing_answer_all_in_denominator_as_incorrect(self):
-        for failure_type in ("truncation", "refusal", "missing_answer", "invalid_answer_format",
-                              "repetition_degeneration", "substantively_incorrect"):
-            row = _row(stage="reason", is_correct=False, failure_type=failure_type)
-            self.assertTrue(analyze.in_accuracy_denominator(row), failure_type)
-            self.assertFalse(analyze.is_success(row), failure_type)
-
-
-class AccuracyTableTests(unittest.TestCase):
-    def test_denominator_includes_all_model_output_failures(self):
-        rows = [
-            _row(item_id="i1", is_correct=True, failure_type="correct"),
-            _row(item_id="i2", is_correct=False, failure_type="truncation"),
-            _row(item_id="i3", is_correct=False, failure_type="repetition_degeneration"),
-            _row(item_id="i4", is_correct=False, failure_type="refusal"),
-            _row(item_id="i5", is_correct=False, failure_type="missing_answer"),
-            _row(item_id="i6", is_correct=False, failure_type="invalid_answer_format"),
-            # excluded: infra failure and a translate-stage row
-            _row(item_id="i7", is_correct=None, failure_type="infrastructure_api_failure"),
-            _row(item_id="i8", is_correct=None, failure_type="translation_completed", stage="translate"),
-        ]
-        table = analyze.accuracy_table(rows, ("model_key", "condition_key"))
-        cell = table[("claude_sonnet_4_6", "A_EE")]
-        self.assertEqual(cell["total"], 6)  # i1..i6 only
-        self.assertEqual(cell["correct"], 1)  # only i1
-
-    def test_grouped_by_source(self):
-        rows = [
-            _row(item_id="i1", source="gsm8k", is_correct=True),
-            _row(item_id="i2", source="bbh_causal_judgement", is_correct=False),
-        ]
-        table = analyze.accuracy_table(rows, ("model_key", "condition_key", "source"))
-        self.assertEqual(table[("claude_sonnet_4_6", "A_EE", "gsm8k")]["total"], 1)
-        self.assertEqual(table[("claude_sonnet_4_6", "A_EE", "bbh_causal_judgement")]["total"], 1)
-
-
-class ValidateTests(unittest.TestCase):
-    def test_duplicate_keys_produce_a_warning(self):
-        rows = [_row(item_id="i1"), _row(item_id="i1")]
-        warnings = analyze.validate(rows)
-        self.assertTrue(any("duplicate" in w.lower() for w in warnings))
-
-    def test_infra_failures_produce_a_warning(self):
-        rows = [_row(item_id="i1", is_correct=None, failure_type="infrastructure_api_failure")]
-        warnings = analyze.validate(rows)
-        self.assertTrue(any("infrastructure" in w.lower() for w in warnings))
-
-    def test_clean_data_has_no_warnings(self):
-        rows = [_row(item_id="i1"), _row(item_id="i2")]
-        self.assertEqual(analyze.validate(rows), [])
+    def test_missing_pivot_reasoning_is_excluded_when_translation_is_usable(self):
+        outcomes = analyze.condition_outcomes([
+            row(condition_key="A_EI", stage="translate", is_correct=None,
+                failure_type="translation_completed"),
+        ], "A_EI")
+        self.assertEqual(outcomes, {})
 
 
 class PairedComparisonTests(unittest.TestCase):
-    def test_paired_by_item_id_across_conditions(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_EE", is_correct=True),
-            _row(item_id="i2", condition_key="A_EE", is_correct=True),
-            _row(item_id="i3", condition_key="A_EE", is_correct=False),
-            _row(item_id="i1", condition_key="A_II", is_correct=True),
-            _row(item_id="i2", condition_key="A_II", is_correct=False),  # discordant: A only
-            _row(item_id="i3", condition_key="A_II", is_correct=True),   # discordant: B only
-        ]
-        result = analyze.paired_comparison(rows, "claude_sonnet_4_6", "A_EE", "A_II")
+    def test_paired_test_reports_directional_discordance(self):
+        index = {
+            ("model", "A_IE", "reason"): {
+                "i1": row(item_id="i1", condition_key="A_IE", is_correct=True),
+                "i2": row(item_id="i2", condition_key="A_IE", is_correct=False),
+                "i3": row(item_id="i3", condition_key="A_IE", is_correct=True),
+            },
+            ("model", "A_II", "reason"): {
+                "i1": row(item_id="i1", condition_key="A_II", is_correct=False),
+                "i2": row(item_id="i2", condition_key="A_II", is_correct=True),
+                "i3": row(item_id="i3", condition_key="A_II", is_correct=True),
+            },
+        }
+        result = analyze.paired_test(index, "model", "A_IE", "A_II", seed=42)
         self.assertEqual(result["n_paired"], 3)
-        self.assertEqual(result["both"], 1)
-        self.assertEqual(result["a_only"], 1)
-        self.assertEqual(result["b_only"], 1)
-        self.assertEqual(result["neither"], 0)
-
-    def test_unpaired_items_are_excluded(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_EE", is_correct=True),
-            _row(item_id="i2", condition_key="A_II", is_correct=True),  # no matching A_EE row
-        ]
-        result = analyze.paired_comparison(rows, "claude_sonnet_4_6", "A_EE", "A_II")
-        self.assertIsNone(result)  # no shared items at all
-
-    def test_accuracy_uses_paired_denominator_not_each_conditions_full_set(self):
-        # Regression: cond_b has an extra item (i4) with no counterpart in cond_a. Before
-        # the fix, acc_b was computed over len(by_item_b) == 3 instead of the paired
-        # sample size (2), silently changing the reported accuracy difference relative to
-        # what McNemar actually tested.
-        rows = [
-            _row(item_id="i1", condition_key="A_EE", is_correct=True),
-            _row(item_id="i2", condition_key="A_EE", is_correct=False),
-            _row(item_id="i1", condition_key="A_II", is_correct=True),
-            _row(item_id="i2", condition_key="A_II", is_correct=True),
-            _row(item_id="i4", condition_key="A_II", is_correct=True),  # unpaired extra
-        ]
-        result = analyze.paired_comparison(rows, "claude_sonnet_4_6", "A_EE", "A_II")
-        self.assertEqual(result["n_paired"], 2)
-        # Paired accuracy over {i1, i2} only: A_EE = 1/2 = 50%, A_II = 2/2 = 100%.
-        self.assertAlmostEqual(result["accuracy_a"], 50.0)
-        self.assertAlmostEqual(result["accuracy_b"], 100.0)
-
-    def test_infra_failure_excluded_from_pairing(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_EE", is_correct=True),
-            _row(item_id="i1", condition_key="A_II", is_correct=None, failure_type="infrastructure_api_failure"),
-        ]
-        result = analyze.paired_comparison(rows, "claude_sonnet_4_6", "A_EE", "A_II")
-        self.assertIsNone(result)  # i1 excluded from A_II's denominator-eligible set
+        self.assertEqual(result["first_only_correct"], 1)
+        self.assertEqual(result["second_only_correct"], 1)
+        self.assertEqual(result["both_correct"], 1)
+        self.assertEqual(result["both_incorrect"], 0)
+        self.assertAlmostEqual(result["delta_first_minus_second"], 0.0)
+        self.assertEqual(result["mcnemar_exact_p"], 1.0)
 
 
-class ResolveConditionOutcomesTests(unittest.TestCase):
-    def test_non_pivot_condition_uses_reason_stage_directly(self):
-        rows = [_row(item_id="i1", condition_key="A_EE", stage="reason", is_correct=True)]
-        outcomes = analyze.resolve_condition_outcomes(rows, "claude_sonnet_4_6", "A_EE")
-        self.assertEqual(outcomes, {"i1": True})
-
-    def test_pivot_with_completed_translation_and_reason_uses_reason_outcome(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="translation_completed"),
-            _row(item_id="i1", condition_key="A_IE", stage="reason", is_correct=False,
-                 failure_type="substantively_incorrect"),
-        ]
-        outcomes = analyze.resolve_condition_outcomes(rows, "claude_sonnet_4_6", "A_IE")
-        self.assertEqual(outcomes, {"i1": False})
-
-    def test_pivot_model_caused_translation_failure_with_no_reason_row_is_incorrect(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="translation_format_failure"),
-        ]
-        outcomes = analyze.resolve_condition_outcomes(rows, "claude_sonnet_4_6", "A_IE")
-        self.assertEqual(outcomes, {"i1": False})
-
-    def test_pivot_truncated_translation_with_no_reason_row_is_incorrect(self):
-        # Regression: a truncated (or refused) translation is also a model-caused
-        # failure — the model failed to produce a usable pivot translation, even though
-        # the response was nonempty and didn't misuse the answer tag.
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="truncation"),
-        ]
-        outcomes = analyze.resolve_condition_outcomes(rows, "claude_sonnet_4_6", "A_IE")
-        self.assertEqual(outcomes, {"i1": False})
-
-    def test_pivot_refused_translation_with_no_reason_row_is_incorrect(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="refusal"),
-        ]
-        outcomes = analyze.resolve_condition_outcomes(rows, "claude_sonnet_4_6", "A_IE")
-        self.assertEqual(outcomes, {"i1": False})
-
-    def test_pivot_infra_failure_translation_with_no_reason_row_is_unresolved(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="infrastructure_api_failure"),
-        ]
-        outcomes = analyze.resolve_condition_outcomes(rows, "claude_sonnet_4_6", "A_IE")
-        self.assertIsNone(outcomes["i1"])
-
-
-class AccuracyTableStagedPivotTests(unittest.TestCase):
-    def test_model_caused_translation_failure_counts_as_incorrect_not_dropped(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="translation_format_failure"),
-            _row(item_id="i2", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="translation_completed"),
-            _row(item_id="i2", condition_key="A_IE", stage="reason", is_correct=True,
-                 failure_type="correct"),
-        ]
-        table = analyze.accuracy_table(rows, ("model_key", "condition_key"))
-        cell = table[("claude_sonnet_4_6", "A_IE")]
-        self.assertEqual(cell["total"], 2)  # i1 (incorrect) + i2 (correct) — i1 not dropped
-        self.assertEqual(cell["correct"], 1)
-
-    def test_infra_failure_translation_excluded_from_denominator(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="infrastructure_api_failure"),
-        ]
-        table = analyze.accuracy_table(rows, ("model_key", "condition_key"))
-        self.assertNotIn(("claude_sonnet_4_6", "A_IE"), table)
-
-
-class PairedComparisonStagedPivotTests(unittest.TestCase):
-    def test_model_caused_translation_failure_pairs_as_incorrect(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_EE", stage="reason", is_correct=True),
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="translation_format_failure"),
-        ]
-        result = analyze.paired_comparison(rows, "claude_sonnet_4_6", "A_EE", "A_IE")
-        self.assertIsNotNone(result)
-        self.assertEqual(result["n_paired"], 1)
-        self.assertEqual(result["a_only"], 1)  # correct under A_EE, incorrect under A_IE
-
-    def test_infra_failure_translation_excluded_from_pairing(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_EE", stage="reason", is_correct=True),
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="infrastructure_api_failure"),
-        ]
-        result = analyze.paired_comparison(rows, "claude_sonnet_4_6", "A_EE", "A_IE")
-        self.assertIsNone(result)
-
-
-class ManifestCompletenessTests(unittest.TestCase):
-    def _manifest(self, **overrides):
-        defaults = dict(
-            models=["claude_sonnet_4_6"],
-            planned_item_ids_by_condition={"A_EE": ["i1", "i2"]},
-        )
-        defaults.update(overrides)
-        return defaults
-
-    def test_all_planned_units_present_has_no_warnings(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_EE", stage="reason"),
-            _row(item_id="i2", condition_key="A_EE", stage="reason"),
-        ]
-        manifest = self._manifest()
-        warnings = analyze.check_manifest_completeness(rows, manifest)
-        self.assertEqual(warnings, [])
-
-    def test_missing_row_entirely_is_flagged(self):
-        rows = [_row(item_id="i1", condition_key="A_EE", stage="reason")]
-        manifest = self._manifest()
-        warnings = analyze.check_manifest_completeness(rows, manifest)
-        self.assertTrue(any("i2" in w or "1 planned" in w for w in warnings))
-
-    def test_pivot_missing_translate_row_is_flagged(self):
-        manifest = self._manifest(planned_item_ids_by_condition={"A_IE": ["i1"]})
-        warnings = analyze.check_manifest_completeness([], manifest)
-        self.assertTrue(any("translate" in w for w in warnings))
-
-    def test_pivot_missing_reason_after_model_caused_translation_failure_not_flagged(self):
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="translation_format_failure"),
-        ]
-        manifest = self._manifest(planned_item_ids_by_condition={"A_IE": ["i1"]})
-        warnings = analyze.check_manifest_completeness(rows, manifest)
-        self.assertEqual(warnings, [])
-
-    def test_pivot_missing_reason_after_infra_failure_not_flagged_here(self):
-        # This is surfaced by validate()'s NOT_EVALUATED_FAILURE_TYPES warning instead —
-        # check_manifest_completeness only flags rows that are missing outright.
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="infrastructure_api_failure"),
-        ]
-        manifest = self._manifest(planned_item_ids_by_condition={"A_IE": ["i1"]})
-        warnings = analyze.check_manifest_completeness(rows, manifest)
-        self.assertEqual(warnings, [])
-
-    def test_pivot_completed_translation_missing_reason_is_flagged(self):
-        # A genuinely unexpected gap: translation succeeded but reason never ran/wrote.
-        rows = [
-            _row(item_id="i1", condition_key="A_IE", stage="translate", is_correct=None,
-                 failure_type="translation_completed"),
-        ]
-        manifest = self._manifest(planned_item_ids_by_condition={"A_IE": ["i1"]})
-        warnings = analyze.check_manifest_completeness(rows, manifest)
-        self.assertTrue(any("reason" in w for w in warnings))
-
-    def test_validate_includes_manifest_warnings_when_manifest_given(self):
-        rows = [_row(item_id="i1", condition_key="A_EE", stage="reason")]
-        manifest = self._manifest()
-        warnings = analyze.validate(rows, manifest)
-        self.assertTrue(any("planned" in w.lower() for w in warnings))
-
-    def test_validate_skips_manifest_check_when_no_manifest_given(self):
-        rows = [_row(item_id="i1", condition_key="A_EE", stage="reason")]
-        self.assertEqual(analyze.validate(rows), [])
-
-
-class MergeResumedRowsTests(unittest.TestCase):
-    def _manifest(self, **overrides):
-        defaults = dict(
-            dataset_version="dataset_v1", protocol_version="protocol_v2",
-            evaluator_version="evaluator_v4",
-            planned_item_ids_by_condition={"A_EE": ["i1", "i2"]},
-            models=["claude_sonnet_4_6"],
-            model_settings={"claude_sonnet_4_6": {"config_fingerprint": "fp-1"}},
-        )
-        defaults.update(overrides)
-        return defaults
-
-    def _compatible_row(self, **overrides):
-        base = dict(
-            dataset_version="dataset_v1", protocol_version="protocol_v2",
-            evaluator_version="evaluator_v4", config_fingerprint="fp-1",
-        )
-        base.update(overrides)
-        return _row(**base)
-
-    def _write_ancestor(self, rows):
-        tmp_dir = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, tmp_dir, ignore_errors=True)
-        with open(os.path.join(tmp_dir, "ancestor.jsonl"), "w") as f:
-            for r in rows:
-                f.write(json.dumps(r) + "\n")
-        old_runs_dir = analyze.RUNS_DIR
-        analyze.RUNS_DIR = tmp_dir
-        self.addCleanup(setattr, analyze, "RUNS_DIR", old_runs_dir)
-
-    def test_planned_and_compatible_ancestor_unit_is_merged_in(self):
-        rows = [self._compatible_row(item_id="i1")]
-        self._write_ancestor([self._compatible_row(item_id="i1"), self._compatible_row(item_id="i2")])
-        merged = analyze.merge_resumed_rows(rows, ["ancestor"], self._manifest())
-        merged_ids = {r["item_id"] for r in merged}
-        self.assertEqual(merged_ids, {"i1", "i2"})
-        # Only 1 copy of i1 — the current run's own row, not a duplicate from the ancestor.
-        self.assertEqual(sum(1 for r in merged if r["item_id"] == "i1"), 1)
-
-    def test_ancestor_unit_not_planned_by_current_manifest_is_not_merged(self):
-        # Regression: an ancestor run may be a much larger prior experiment (e.g. 1,000
-        # items) that this run only resumed a handful of. Pulling in every row from that
-        # file would silently inflate this run's analysis with unrelated data.
-        rows = [self._compatible_row(item_id="i1")]
-        self._write_ancestor([
-            self._compatible_row(item_id="i1"),
-            self._compatible_row(item_id="unplanned-item"),
+class FailureRateTests(unittest.TestCase):
+    def test_failure_rates_use_independent_record_flags(self):
+        result = analyze.failure_rates([
+            row(is_correct=False, failure_type="truncation", is_truncated=True,
+                degeneration_candidate=True, format_compliant=False),
+            row(item_id="item-2", is_correct=False,
+                failure_type="substantively_incorrect", is_truncated=False,
+                degeneration_candidate=False, format_compliant=True),
         ])
-        merged = analyze.merge_resumed_rows(rows, ["ancestor"], self._manifest())
-        merged_ids = {r["item_id"] for r in merged}
-        self.assertEqual(merged_ids, {"i1"})
-
-    def test_ancestor_unit_with_different_dataset_version_is_not_merged(self):
-        rows = [self._compatible_row(item_id="i1")]
-        self._write_ancestor([self._compatible_row(item_id="i2", dataset_version="dataset_v0")])
-        merged = analyze.merge_resumed_rows(rows, ["ancestor"], self._manifest())
-        self.assertEqual({r["item_id"] for r in merged}, {"i1"})
-
-    def test_ancestor_unit_with_different_config_fingerprint_is_not_merged(self):
-        rows = [self._compatible_row(item_id="i1")]
-        self._write_ancestor([self._compatible_row(item_id="i2", config_fingerprint="fp-stale")])
-        merged = analyze.merge_resumed_rows(rows, ["ancestor"], self._manifest())
-        self.assertEqual({r["item_id"] for r in merged}, {"i1"})
-
-    def test_missing_ancestor_file_is_skipped_not_fatal(self):
-        rows = [self._compatible_row(item_id="i1")]
-        merged = analyze.merge_resumed_rows(rows, ["does-not-exist"], self._manifest())
-        self.assertEqual(merged, rows)
-
-
-class LoadRunMergesAncestorsTests(unittest.TestCase):
-    def setUp(self):
-        self.tmp_dir = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.tmp_dir, ignore_errors=True)
-        self.old_runs_dir = analyze.RUNS_DIR
-        analyze.RUNS_DIR = self.tmp_dir
-        self.addCleanup(setattr, analyze, "RUNS_DIR", self.old_runs_dir)
-
-    def _write_jsonl(self, run_id, rows):
-        with open(os.path.join(self.tmp_dir, f"{run_id}.jsonl"), "w") as f:
-            for r in rows:
-                f.write(json.dumps(r) + "\n")
-
-    def _write_manifest(self, run_id, **fields):
-        with open(os.path.join(self.tmp_dir, f"{run_id}.manifest.json"), "w") as f:
-            json.dump(fields, f)
-
-    def test_run_with_no_manifest_returns_only_its_own_rows(self):
-        self._write_jsonl("run-c", [_row(item_id="i1")])
-        rows = analyze.load_run("run-c")
-        self.assertEqual([r["item_id"] for r in rows], ["i1"])
-
-    def test_run_that_resumed_from_ancestor_merges_ancestor_rows(self):
-        compatible = dict(
-            dataset_version="dataset_v1", protocol_version="protocol_v2",
-            evaluator_version="evaluator_v4", config_fingerprint="fp-1",
-        )
-        self._write_jsonl("run-a", [
-            _row(item_id="i1", **compatible), _row(item_id="i2", **compatible),
-        ])
-        self._write_jsonl("run-c", [_row(item_id="i1", **compatible)])
-        self._write_manifest(
-            "run-c", resuming_from_run_ids=["run-a"],
-            planned_item_ids_by_condition={"A_EE": ["i1", "i2"]},
-            models=["claude_sonnet_4_6"],
-            model_settings={"claude_sonnet_4_6": {"config_fingerprint": "fp-1"}},
-            **compatible,
-        )
-        rows = analyze.load_run("run-c")
-        self.assertEqual({r["item_id"] for r in rows}, {"i1", "i2"})
-
-    def test_run_that_resumed_from_ancestor_does_not_merge_unplanned_or_incompatible_rows(self):
-        compatible = dict(
-            dataset_version="dataset_v1", protocol_version="protocol_v2",
-            evaluator_version="evaluator_v4", config_fingerprint="fp-1",
-        )
-        self._write_jsonl("run-a", [
-            _row(item_id="i1", **compatible),
-            _row(item_id="unplanned-item", **compatible),
-            _row(item_id="i2", **{**compatible, "config_fingerprint": "fp-stale"}),
-        ])
-        self._write_jsonl("run-c", [_row(item_id="i1", **compatible)])
-        self._write_manifest(
-            "run-c", resuming_from_run_ids=["run-a"],
-            planned_item_ids_by_condition={"A_EE": ["i1", "i2"]},
-            models=["claude_sonnet_4_6"],
-            model_settings={"claude_sonnet_4_6": {"config_fingerprint": "fp-1"}},
-            **compatible,
-        )
-        rows = analyze.load_run("run-c")
-        # unplanned-item is not in planned_item_ids_by_condition; i2 in run-a used a stale
-        # config_fingerprint — neither should be merged in.
-        self.assertEqual({r["item_id"] for r in rows}, {"i1"})
-
-
-class MainCliManifestTests(unittest.TestCase):
-    def setUp(self):
-        self.tmp_dir = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.tmp_dir, ignore_errors=True)
-        self.old_argv = sys.argv
-
-    def tearDown(self):
-        sys.argv = self.old_argv
-
-    def _write_jsonl(self, path, rows):
-        with open(path, "w") as f:
-            for r in rows:
-                f.write(json.dumps(r) + "\n")
-
-    def test_path_without_manifest_or_sibling_warns_and_strict_exits(self):
-        jsonl_path = os.path.join(self.tmp_dir, "hpc_results.jsonl")
-        self._write_jsonl(jsonl_path, [_row(item_id="i1")])
-        out_path = os.path.join(self.tmp_dir, "out.md")
-        sys.argv = ["analyze.py", "--path", jsonl_path, "--output", out_path, "--strict"]
-        with self.assertRaises(SystemExit):
-            analyze.main()
-
-    def test_path_with_sibling_manifest_is_found_automatically(self):
-        jsonl_path = os.path.join(self.tmp_dir, "hpc_results.jsonl")
-        self._write_jsonl(jsonl_path, [_row(item_id="i1")])
-        manifest_path = os.path.join(self.tmp_dir, "hpc_results.manifest.json")
-        with open(manifest_path, "w") as f:
-            json.dump({"planned_item_ids_by_condition": {"A_EE": ["i1"]}, "models": ["claude_sonnet_4_6"]}, f)
-        out_path = os.path.join(self.tmp_dir, "out.md")
-        sys.argv = ["analyze.py", "--path", jsonl_path, "--output", out_path, "--strict"]
-        analyze.main()  # must not raise — the sibling manifest satisfies completeness
-        self.assertTrue(os.path.exists(out_path))
-
-    def test_path_with_explicit_manifest_flag_is_used(self):
-        jsonl_path = os.path.join(self.tmp_dir, "hpc_results.jsonl")
-        self._write_jsonl(jsonl_path, [_row(item_id="i1")])
-        manifest_path = os.path.join(self.tmp_dir, "elsewhere.manifest.json")
-        with open(manifest_path, "w") as f:
-            json.dump({"planned_item_ids_by_condition": {"A_EE": ["i1"]}, "models": ["claude_sonnet_4_6"]}, f)
-        out_path = os.path.join(self.tmp_dir, "out.md")
-        sys.argv = [
-            "analyze.py", "--path", jsonl_path, "--manifest", manifest_path,
-            "--output", out_path, "--strict",
-        ]
-        analyze.main()
-        self.assertTrue(os.path.exists(out_path))
-
-
-class HolmAdjustTests(unittest.TestCase):
-    def test_preserves_input_order(self):
-        p_values = [0.04, 0.01, 0.03]
-        adjusted = analyze.holm_adjust(p_values)
-        self.assertEqual(len(adjusted), 3)
-        # Holm-adjusted p-values are monotonically non-decreasing with the sorted rank, and
-        # each adjustment is >= the raw p-value.
-        for raw, adj in zip(p_values, adjusted):
-            self.assertGreaterEqual(adj, raw)
-
-
-class WilsonCiTests(unittest.TestCase):
-    def test_zero_total_returns_zero_interval(self):
-        self.assertEqual(analyze.wilson_ci(0, 0), (0.0, 0.0))
-
-    def test_interval_contains_point_estimate(self):
-        lo, hi = analyze.wilson_ci(8, 10)
-        self.assertLessEqual(lo, 0.8)
-        self.assertGreaterEqual(hi, 0.8)
+        self.assertEqual(result["total_reasoning_or_direct_records"], 2)
+        self.assertEqual(result["truncated_count"], 1)
+        self.assertEqual(result["degeneration_candidate_count"], 1)
+        self.assertEqual(result["format_noncompliant_count"], 1)
+        self.assertEqual(result["failure_type_counts"]["truncation"], 1)
 
 
 if __name__ == "__main__":

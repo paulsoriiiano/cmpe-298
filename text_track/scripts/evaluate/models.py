@@ -3,6 +3,8 @@
 Every provider implements the ModelClient protocol: complete(system, user, config) ->
 ModelResponse. This is the seam tests substitute a FakeModelClient into (see tests/fakes.py).
 """
+from __future__ import annotations
+
 import dataclasses
 import hashlib
 import json
