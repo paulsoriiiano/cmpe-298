@@ -30,6 +30,13 @@ DEFAULT_INPUTS = {
 DEFAULT_OUTPUT_MD = os.path.join(ROOT, "data", "analysis.md")
 DEFAULT_OUTPUT_JSON = os.path.join(ROOT, "data", "analysis.json")
 DEFAULT_DATASET = os.path.join(ROOT, "data", "dataset.jsonl")
+DEFAULT_REGRADED_DIR = os.path.join(ROOT, "results_regraded")
+
+REGRADED_FILENAMES = {
+    "gpt_5_2": "full-gpt-5-2-evaluator-v1_regraded.jsonl",
+    "qwen_3_6_27b": "full-qwen36-evaluator-v5_regraded.jsonl",
+    "qwen_sealion_v4_5_27b_it": "full-sealion-evaluator-v5_regraded.jsonl",
+}
 
 MODEL_NAMES = {
     "gpt_5_2": "GPT-5.2",
@@ -66,6 +73,15 @@ def load_records(path):
                 raise ValueError(f"Invalid JSON in {path}:{line_number}: {exc}") from exc
             rows.append(row)
     return rows
+
+
+def input_paths(results_dir=None):
+    if results_dir is None:
+        return DEFAULT_INPUTS
+    return {
+        model: os.path.join(results_dir, filename)
+        for model, filename in REGRADED_FILENAMES.items()
+    }
 
 
 def mean_or_none(values):
@@ -590,10 +606,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-md", default=DEFAULT_OUTPUT_MD)
     parser.add_argument("--output-json", default=DEFAULT_OUTPUT_JSON)
+    parser.add_argument(
+        "--results-dir",
+        default=None,
+        help="Analyze the three re-graded JSONL files in this directory.",
+    )
     args = parser.parse_args()
 
+    input_files = input_paths(args.results_dir)
     records_by_model = {}
-    for model, path in DEFAULT_INPUTS.items():
+    for model, path in input_files.items():
         if not os.path.exists(path):
             raise FileNotFoundError(path)
         records_by_model[model] = load_records(path)
@@ -602,7 +624,7 @@ def main():
     result["tiktoken_analysis"] = tiktoken_analysis(records_by_model)
     result["metadata"] = {
         "models": list(records_by_model),
-        "input_files": DEFAULT_INPUTS,
+        "input_files": input_files,
         "primary_conditions": PRIMARY_CONDITIONS,
         "all_conditions": ALL_CONDITIONS,
         "comparisons": [{"first": a, "second": b, "label": label} for a, b, label in COMPARISONS],
