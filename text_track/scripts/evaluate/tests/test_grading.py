@@ -504,5 +504,63 @@ class RationalePresenceHeuristicTests(unittest.TestCase):
         self.assertTrue(has_text_beyond_answer(text))
 
 
+class EvaluatorV6RegressionTests(unittest.TestCase):
+    """evaluator_v6: refusal/degeneration only apply to responses that failed to produce an
+    answer; decorated numerics are graded on value and flagged noncompliant."""
+
+    def _classify(self, text, gold, source, finish="stop"):
+        return classify_result(
+            response=canned_response(text, finish_reason=finish), exception=None,
+            canonical_answer=gold, source=source, stage="reason",
+        )
+
+    def test_repetitive_but_normally_finished_with_correct_answer_is_correct(self):
+        # truth-table style output: many repeated 4-grams, finished normally, correct tag
+        text = " ".join(["| T | F | T | F |"] * 60) + "\nSo the argument is invalid.\n<answer>D</answer>"
+        r = self._classify(text, "D", "mmlu_formal_logic")
+        self.assertTrue(r.degeneration_candidate)          # diagnostic flag preserved
+        self.assertEqual(r.failure_type, FailureType.CORRECT)
+        self.assertIs(r.is_correct, True)
+
+    def test_repetitive_normally_finished_wrong_answer_is_incorrect_not_degenerate(self):
+        text = " ".join(["| T | F | T | F |"] * 60) + "\n<answer>A</answer>"
+        r = self._classify(text, "D", "mmlu_formal_logic")
+        self.assertEqual(r.failure_type, FailureType.SUBSTANTIVELY_INCORRECT)
+        self.assertIs(r.is_correct, False)
+
+    def test_repetitive_and_truncated_is_still_degenerate(self):
+        r = self._classify(" ".join(["loop token repeat"] * 40), "109", "gsm8k", finish="length")
+        self.assertEqual(r.failure_type, FailureType.REPETITION_DEGENERATION)
+        self.assertIs(r.is_correct, False)
+
+    def test_cannot_inside_reasoning_with_answer_is_not_a_refusal(self):
+        text = "If I must choose between A and C, I cannot.\nTherefore D.\n<answer>D</answer>"
+        r = self._classify(text, "D", "mmlu_conceptual_physics")
+        self.assertEqual(r.failure_type, FailureType.CORRECT)
+
+    def test_refusal_without_answer_is_still_refusal(self):
+        r = self._classify("I cannot help with that request.", "109", "gsm8k")
+        self.assertEqual(r.failure_type, FailureType.REFUSAL)
+
+    def test_percent_answer_is_correct_but_noncompliant(self):
+        r = self._classify("Work.\n<answer>60%</answer>", "60", "gsm8k")
+        self.assertEqual(r.failure_type, FailureType.CORRECT)
+        self.assertIs(r.is_correct, True)
+        self.assertFalse(r.format_compliant)
+
+    def test_wrong_percent_answer_is_substantively_incorrect(self):
+        r = self._classify("Work.\n<answer>20%</answer>", "60", "gsm8k")
+        self.assertEqual(r.failure_type, FailureType.SUBSTANTIVELY_INCORRECT)
+
+    def test_non_numeric_gsm8k_answer_is_still_invalid_format(self):
+        r = self._classify("Work.\n<answer>Cannot be determined</answer>", "18", "gsm8k")
+        self.assertEqual(r.failure_type, FailureType.INVALID_ANSWER_FORMAT)
+        self.assertIs(r.is_correct, False)
+
+    def test_none_answer_for_multiple_choice_is_still_invalid_format(self):
+        r = self._classify("Inconsistent.\n<answer>None</answer>", "B", "bbh_logical_deduction")
+        self.assertEqual(r.failure_type, FailureType.INVALID_ANSWER_FORMAT)
+
+
 if __name__ == "__main__":
     unittest.main()

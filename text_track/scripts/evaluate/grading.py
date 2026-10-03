@@ -240,6 +240,19 @@ def looks_like_translation_format_failure(translated_text: str) -> bool:
     return False
 
 
+# evaluator_v6: a gsm8k answer such as "60%" or "$18" is the right VALUE with extra
+# decoration. The protocol treats semantic correctness and format compliance as separate
+# axes, so it must be graded on its value and flagged format_compliant=False (the tag
+# contract says "no units"), not scored as an invalid answer.
+_NUMERIC_DECORATION_RE = re.compile(r"[%$\s]")
+
+
+def _strip_numeric_decoration(text: str | None) -> str | None:
+    if text is None:
+        return None
+    return _NUMERIC_DECORATION_RE.sub("", text.strip())
+
+
 @dataclass(frozen=True)
 class ClassificationResult:
     failure_type: FailureType
@@ -330,14 +343,22 @@ def classify_result(
             )
 
         # reason / direct stages from here on.
-        if _REFUSAL_PATTERNS.search(text):
+        # evaluator_v6: whether the response produced an answer at all (tag or fallback).
+        # Refusal and repetition-degeneration are judgments about a response that FAILED to
+        # produce a usable answer. A response that finished normally and committed to an
+        # answer is graded on that answer: phrases like "I cannot assume..." inside ordinary
+        # reasoning are not refusals, and a truth table legitimately repeats 4-grams.
+        has_answer = (extract_answer(text) is not None
+                      or extract_fallback_answer(text, source) is not None)
+
+        if _REFUSAL_PATTERNS.search(text) and not has_answer:
             return ClassificationResult(
                 failure_type=FailureType.REFUSAL, extracted_answer=None, is_correct=False,
                 format_compliant=False, is_truncated=is_truncated,
                 repetition_ratio=repetition_ratio, degeneration_candidate=degeneration_candidate,
             )
 
-        if degeneration_candidate:
+        if degeneration_candidate and (is_truncated or not has_answer):
             return ClassificationResult(
                 failure_type=FailureType.REPETITION_DEGENERATION, extracted_answer=None,
                 is_correct=False, format_compliant=False, is_truncated=is_truncated,
@@ -374,6 +395,13 @@ def classify_result(
         # vocabulary the contract specifies. A response that isn't even in the right
         # ballpark (e.g. a sentence where a bare letter was expected) fails here.
         lenient_class = _semantic_class(extracted)
+        decorated_numeric = False
+        if (source == "gsm8k" and lenient_class is not None and shape is not None
+                and not shape.match(lenient_class.upper())):
+            stripped = _strip_numeric_decoration(lenient_class)
+            if stripped is not None and shape.match(stripped):
+                lenient_class = stripped
+                decorated_numeric = True  # right value, extra "%"/"$": noncompliant, not invalid
         if shape is not None and lenient_class is not None and not shape.match(lenient_class.upper()):
             return ClassificationResult(
                 failure_type=FailureType.INVALID_ANSWER_FORMAT, extracted_answer=extracted,
@@ -389,7 +417,7 @@ def classify_result(
         # either way, since there's no per-language token divergence there.
         strict_class = normalize_answer(extracted)
         strict_ok = shape is None or strict_class is None or bool(shape.match(strict_class.upper()))
-        format_compliant = format_compliant and strict_ok
+        format_compliant = format_compliant and strict_ok and not decorated_numeric
 
         is_correct = grade(extracted, canonical_answer) if canonical_answer is not None else False
         failure_type = FailureType.CORRECT if is_correct else FailureType.SUBSTANTIVELY_INCORRECT
